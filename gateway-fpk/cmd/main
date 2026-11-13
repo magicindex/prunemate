@@ -1,0 +1,48 @@
+#!/bin/bash
+# PruneMate 网关：直接跑在主机上（不需要任何 Docker 镜像）
+APP_DIR="/var/apps/prunemate-gateway"
+SCRIPT="$APP_DIR/target/gateway/gateway.py"
+STATE="$APP_DIR/config/state"
+PUBLIC="$APP_DIR/shares/prunemate-gateway"
+LOGFILE="$APP_DIR/config/gateway.log"
+PIDFILE="$APP_DIR/config/gateway.pid"
+PY="/usr/bin/python3"
+
+running() {
+    [ -f "$PIDFILE" ] || return 1
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+case $1 in
+start)
+    mkdir -p "$STATE" "$PUBLIC" "$(dirname "$LOGFILE")" 2>/dev/null
+    running && exit 0
+    [ -x "$PY" ] || { echo "python3 不可用"; exit 1; }
+    STATE_DIR="$STATE" PUBLIC_DIR="$PUBLIC" PORT=2376 INFO_PORT=2377 \
+    UPSTREAM="unix:///var/run/docker.sock" \
+        nohup "$PY" -u "$SCRIPT" >>"$LOGFILE" 2>&1 &
+    echo $! > "$PIDFILE"
+    sleep 2
+    running && exit 0 || exit 1
+    ;;
+stop)
+    if running; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null
+        for _ in 1 2 3 4 5 6 7 8 9 10; do
+            running || break
+            sleep 0.3
+        done
+        running && kill -9 "$(cat "$PIDFILE")" 2>/dev/null
+    fi
+    rm -f "$PIDFILE"
+    exit 0
+    ;;
+status)
+    running && exit 0 || exit 3
+    ;;
+*)
+    exit 1
+    ;;
+esac

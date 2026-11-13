@@ -1,0 +1,29 @@
+# 手动 Docker 部署（不使用 fpk 时）
+# 使用前：sudo chown root:root ./config ./logs && sudo chmod 755 ./config ./logs
+services:
+  prunemate:
+    image: anoniemerd/prunemate:1.4.0
+    container_name: prunemate
+    ports:
+      - "7676:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # 功能必需，等于宿主机 root 权限
+      - ./logs:/var/log
+      - ./config:/config
+      # 简体中文界面（只读覆盖镜像内英文文件）
+      - ./src/index.html:/app/templates/index.html:ro
+      - ./src/login.html:/app/templates/login.html:ro
+      - ./src/prunemate.py:/app/prunemate.py:ro
+    environment:
+      - PRUNEMATE_TZ=Asia/Shanghai
+      - PRUNEMATE_TIME_24H=true
+      - PRUNEMATE_AUTH_USER=admin
+      - PRUNEMATE_AUTH_PASSWORD_HASH=c2NyeXB0OjMyNzY4Ojg6MSRSNk1pS2VEQTNKTjJLaXBUJGExMTY2MTVlNGExNWY5YWQzYjIzYmY3N2FkODJkMTcwNjI1ZjJjNDBkZTMyYjJjNWYyZjkwYThjM2YyM2NhZjlmZjlhNTBjNjBkOGY0ODg0MjA3ZDRlNTUwNmFhOWY4NGFlNWUwNGNmMDMzYzA4OGVjMWUyZDNlMDBhMDI0OTk2
+      - PRUNEMATE_SECRET=5863ba45606300195b17328a477996cf4a02c868e57776318170f00cbadf5b08
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 512m
+    restart: unless-stopped

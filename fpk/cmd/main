@@ -1,0 +1,20 @@
+#!/bin/bash
+# PruneMate 应用入口：容器生命周期由应用中心（docker-project）托管，这里只做状态回报
+
+CONTAINER="prunemate"
+
+case $1 in
+start|stop)
+    exit 0
+    ;;
+status)
+    if docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null | grep -q "true"; then
+        exit 0
+    else
+        exit 3
+    fi
+    ;;
+*)
+    exit 1
+    ;;
+esac

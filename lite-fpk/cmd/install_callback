@@ -1,0 +1,32 @@
+#!/bin/bash
+# 安装完成：把简体中文界面文件部署到 shares，并修正数据目录属主
+# 注意：compose 挂载的是 /var/apps/<appname>/shares/... ，不能依赖 TRIM_APPDEST 的值
+APP="prunemate"
+ROOT="/var/apps/$APP"
+BASE="$ROOT/shares/$APP"
+
+# 清掉 docker 在挂载源缺失时自动创建的目录桩
+rm -rf "$BASE/zh" 2>/dev/null
+mkdir -p "$BASE/zh" "$BASE/config" "$BASE/logs" 2>/dev/null
+
+SRC=""
+for c in "$ROOT/target/docker/zh" "$ROOT/docker/zh" "$ROOT/app/docker/zh" "${TRIM_APPDEST:-}/docker/zh"; do
+    [ -n "$c" ] && [ -f "$c/index.html" ] && { SRC="$c"; break; }
+done
+if [ -z "$SRC" ]; then
+    for c in /vol*/@appcenter/"$APP"/docker/zh; do
+        [ -f "$c/index.html" ] && { SRC="$c"; break; }
+    done
+fi
+
+if [ -n "$SRC" ]; then
+    cp -f "$SRC"/* "$BASE/zh/" 2>/dev/null
+fi
+
+chmod 755 "$BASE" 2>/dev/null
+chmod 644 "$BASE/zh/"* 2>/dev/null
+
+# 容器以 root 运行且 cap_drop ALL，没有 CAP_DAC_OVERRIDE，数据目录必须属于 root
+chown -R root:root "$BASE" 2>/dev/null
+
+exit 0

@@ -1,0 +1,16 @@
+appname               = prunemate
+version               = 1.4.0
+display_name          = PruneMate
+desc                  = 定时清理 Docker 镜像、网络与构建缓存的轻量助手（简体中文版）。默认关闭数据卷清理，避免误删数据。
+platform              = all
+source                = thirdparty
+maintainer            = anoniemerd
+maintainer_url        = https://github.com/anoniemerd/PruneMate
+distributor           = cyberzero
+distributor_url       = https://github.com/magicindex/prunemate
+os_min_version        = 1.2.1010
+desktop_uidir         = ui
+desktop_applaunchname = prunemate.Application
+service_port          = 7676
+checkport             = false
+ctl_stop              = true

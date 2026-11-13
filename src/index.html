@@ -1,0 +1,2420 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>PruneMate · Docker 清理助手</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+
+  <link rel="icon" type="image/svg+xml"
+        href="{{ url_for('static', filename='prunemate-icon.svg') }}"/>
+
+  <style>
+    /* CSS custom properties (theme colors and design tokens) */
+    :root{
+      --bg-900: #020617;
+      --bg-800: #0b1120;
+      --accent: #0ea5e9;
+      --accent-strong: #22c55e;
+      --accent-soft: rgba(14,165,233,0.14);
+      --muted: #9ca3af;
+      --text: #e6eef6;
+      --card-border: rgba(148,163,184,0.06);
+      --glass-border: rgba(148,163,184,0.12);
+      --focus: 0 6px 24px rgba(14,165,233,0.12);
+      --shadow-strong: 0 32px 70px rgba(0,0,0,0.75);
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --btn-elev: 0 10px 30px rgba(16,185,129,0.15);
+      --danger-text:#f87171;
+      --warn-text:#fbbf24;
+    }
+
+    /* ==================== 亮色主题 ==================== */
+    html[data-theme="light"]{
+      --bg-900:#f7f9fc;
+      --bg-800:#eef3f9;
+      --accent:#0284c7;
+      --accent-strong:#16a34a;
+      --accent-soft:rgba(2,132,199,0.10);
+      --muted:#5b6879;
+      --text:#0f172a;
+      --card-border:rgba(15,23,42,0.08);
+      --glass-border:rgba(15,23,42,0.10);
+      --focus:0 6px 24px rgba(2,132,199,0.16);
+      --shadow-strong:0 24px 60px rgba(15,23,42,0.14);
+      --btn-elev:0 10px 26px rgba(22,163,74,0.20);
+      --danger-text:#b91c1c;
+      --warn-text:#a16207;
+    }
+    html[data-theme="light"] body{
+      background:
+        radial-gradient(600px 300px at 12% 6%, rgba(2,132,199,0.10), transparent 22%),
+        linear-gradient(135deg, var(--bg-900), var(--bg-800));
+    }
+    html[data-theme="light"] .container{
+      background:linear-gradient(180deg, rgba(255,255,255,0.97), rgba(248,250,253,0.97));
+      box-shadow:var(--shadow-strong), 0 4px 14px rgba(15,23,42,0.06);
+    }
+    html[data-theme="light"] .container::before{
+      background:linear-gradient(180deg, rgba(255,255,255,0.55), transparent 30%);
+    }
+    html[data-theme="light"] .card{
+      background:linear-gradient(160deg,#ffffff,#f7fafd);
+      box-shadow:0 2px 10px rgba(15,23,42,0.06);
+    }
+    html[data-theme="light"] input[type="time"],
+    html[data-theme="light"] input[type="number"],
+    html[data-theme="light"] input[type="text"],
+    html[data-theme="light"] input[type="password"],
+    html[data-theme="light"] select{
+      background:#ffffff;
+      border-color:rgba(15,23,42,0.14);
+      color:var(--text);
+      box-shadow:inset 0 1px 2px rgba(15,23,42,0.04);
+    }
+    html[data-theme="light"] .btn-secondary{
+      background:linear-gradient(180deg,#ffffff,#f1f5fa);
+      border-color:rgba(15,23,42,0.12);
+      box-shadow:0 2px 8px rgba(15,23,42,0.08);
+      color:var(--text);
+    }
+    html[data-theme="light"] .btn-secondary:hover{
+      background:linear-gradient(180deg,#ffffff,#e8eff8);
+      border-color:rgba(15,23,42,0.18);
+      box-shadow:0 6px 18px rgba(15,23,42,0.10);
+    }
+    html[data-theme="light"] .btn-secondary:active{
+      box-shadow:inset 0 0 0 1px rgba(15,23,42,0.04), 0 1px 4px rgba(15,23,42,0.10);
+    }
+    html[data-theme="light"] .slider{background:#c7d2e0;border-color:rgba(15,23,42,0.08)}
+    html[data-theme="light"] .slider:before{box-shadow:0 2px 6px rgba(15,23,42,0.28)}
+    html[data-theme="light"] .footer{color:#6b7686}
+    html[data-theme="light"] .toast{
+      background:linear-gradient(90deg, rgba(34,197,94,0.16), rgba(2,132,199,0.10));
+      color:#083b25;
+      border-color:rgba(22,163,74,0.30);
+      box-shadow:0 18px 50px rgba(15,23,42,0.20);
+    }
+    html[data-theme="light"] .flash.warn{color:#92400e}
+    html[data-theme="light"] .btn-info,
+    html[data-theme="light"] .btn-theme{background:rgba(15,23,42,0.04)}
+    html[data-theme="light"] .btn-info:hover{background:rgba(2,132,199,0.10);color:#0369a1}
+    html[data-theme="light"] .btn-logout{background:rgba(15,23,42,0.04)}
+    /* 图标/字标：原版「Mate」是白色，亮色底下要转深色；Logo 加一块深色底保持可读 */
+    html[data-theme="light"] .wordmark .white{fill:#0f172a}
+    html[data-theme="light"] .logo-wrap{background:#0b1120}
+    /* 风险标签在浅底上提高对比度 */
+    html[data-theme="light"] .tag-warn{background:rgba(251,191,36,0.18);color:#a16207;border-color:rgba(202,138,4,0.35)}
+    html[data-theme="light"] .tag-danger{background:rgba(239,68,68,0.12);color:#b91c1c;border-color:rgba(220,38,38,0.30)}
+    html[data-theme="light"] .tag-ok{background:rgba(34,197,94,0.14);color:#15803d;border-color:rgba(22,163,74,0.30)}
+    /* 预览弹窗是内联样式，需要 !important 才能覆盖 */
+    html[data-theme="light"] #prunePreviewModal > div{
+      background:linear-gradient(180deg,#ffffff,#f6f9fd) !important;
+      border-color:rgba(15,23,42,0.12) !important;
+      box-shadow:0 24px 60px rgba(15,23,42,0.22) !important;
+    }
+
+    /* 顶部按钮组改成一排，容纳主题切换 */
+    .header-buttons{position:absolute;top:24px;right:24px;display:flex;align-items:center;gap:8px;z-index:10}
+    .header-buttons .btn-info,
+    .header-buttons .btn-logout{position:static;top:auto;right:auto}
+    .header-buttons.has-logout .btn-info{right:auto}
+    .btn-theme{
+      display:flex;align-items:center;justify-content:center;
+      width:36px;height:36px;padding:0;border-radius:9999px;cursor:pointer;
+      color:var(--muted);background:rgba(255,255,255,0.03);
+      border:1px solid var(--glass-border);backdrop-filter:blur(4px);
+      transition:all .2s ease;
+    }
+    .btn-theme:hover{background:rgba(14,165,233,0.10);color:#7dd3fc;border-color:rgba(14,165,233,0.2);transform:translateY(-1px)}
+    .btn-theme svg{width:18px;height:18px;stroke-width:2}
+    @media (max-width:640px){
+      .header-buttons.has-logout .btn-info{right:auto}
+    }
+    /* ================== 亮色主题结束 ================== */
+
+    /* Global box-sizing reset */
+    *{box-sizing:border-box}
+
+    /* Full-height layout setup */
+    html,body{height:100%}
+    /* Main body styling with gradient background and flexbox centering */
+    body {
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(600px 300px at 12% 6%, rgba(14,165,233,0.10), transparent 22%),
+        linear-gradient(135deg, var(--bg-900), var(--bg-800));
+      background-attachment: fixed;
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:16px 16px;
+    }
+
+    /* Main content container with glass morphism effect */
+    .container{
+      width:100%;
+      max-width:820px;
+      background: linear-gradient(180deg, rgba(18,25,44,0.9), rgba(8,12,22,0.9));
+      border-radius:var(--radius-xl);
+      padding:18px;
+      position:relative;
+      box-shadow: var(--shadow-strong), 0 10px 35px rgba(2,6,23,0.6);
+      border:1px solid var(--glass-border);
+      overflow:hidden;
+      backdrop-filter: blur(6px) saturate(1.05);
+    }
+
+    /* Glass effect overlay for container */
+    .container::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      border-radius:inherit;
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent 30%);
+      mix-blend-mode:overlay;
+    }
+
+    /* Header layout and logo styling */
+    .header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+    .title-block{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;transform:translateY(4px)}
+    .logo-wrap{width:82px;height:82px;border-radius:16px;flex-shrink:0}
+    .logo-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+    .title-block h1{display:none}
+    .wordmark{height:36px;max-width:360px}
+    .title-block p{margin:4px 0 0 0;color:var(--muted);font-size:0.88rem}
+
+    /* Typography for headings and labels */
+    h2{font-size:0.98rem;margin-top:0.9rem;margin-bottom:0.3rem;color:var(--text)}
+    h3{font-size:0.9rem;margin:4px 0 6px 0;color:var(--muted);font-weight:600}
+    label{font-size:0.9rem;color:var(--text)}
+
+    /* Flash messages */
+    .flash{padding:10px 12px;border-radius:12px;margin:10px 0;font-size:0.95rem}
+    .flash.info{background:linear-gradient(90deg, rgba(14,165,233,0.08), rgba(59,130,246,0.02));border:1px solid rgba(14,165,233,0.15);color:var(--text)}
+    .flash.warn{background:linear-gradient(90deg, rgba(245,158,11,0.06), transparent);border:1px solid rgba(245,158,11,0.12);color:#ffedd5}
+
+    /* Form inputs */
+    input[type="time"], select, input[type="number"], input[type="text"], input[type="password"]{
+      padding:8px 12px;border-radius:9999px;border:1px solid rgba(255,255,255,0.06);
+      background: rgba(2,6,23,0.6);color:var(--text);font-size:0.95rem;outline:none;
+      transition: box-shadow .16s ease, border-color .12s ease, transform .08s ease;
+      backdrop-filter: blur(6px);
+      font-family: "Montserrat", Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-weight:600;
+    }
+    input[type="time"]:focus, select:focus, input[type="number"]:focus, input[type="text"]:focus, input[type="password"]:focus{
+      box-shadow: var(--focus);
+      border-color: rgba(14,165,233,0.6);
+    }
+
+    /* Field layout within inline rows */
+    .row.inline .field{
+      min-width:160px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Schedule: 3-column grid for consistent alignment */
+    .card.schedule .row.inline{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:16px;
+      align-items:stretch;
+    }
+    .card.schedule .row.inline .field{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+      width:100%;
+    }
+    /* Placeholder cell (third column on daily mode) keeps Time centered */
+    #schedule-placeholder{display:none;visibility:hidden;pointer-events:none;min-width:0;}
+    /* Schedule and notification labels: 2mm left padding for alignment */
+    .card.schedule .row.inline .field > label{margin:0 0 6px 0;line-height:1.3;display:block;padding-left:2mm;}
+    #notif-panel .row.inline .field > label{margin:0 0 6px 0;line-height:1.3;display:block;padding-left:2mm;}
+    /* Normalize input line-height and box-sizing for consistent pill heights */
+    .card.schedule .row.inline input,
+    .card.schedule .row.inline select{line-height:1.4;box-sizing:border-box;width:100%;}
+    /* Remove number input spinner for clean appearance */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button{ -webkit-appearance: none; margin:0; }
+    input[type="number"]{ -moz-appearance: textfield; appearance:textfield; }
+
+    /* Input and select field dimensions */
+    select{width:100%; min-width:140px}
+    input[type="time"], input[type="number"]{width:100%}
+
+    /* Card container styling with gradient background */
+    .card{
+      background: linear-gradient(160deg, rgba(12,18,32,0.92), rgba(10,14,24,0.86));
+      border-radius:var(--radius-lg);
+      padding:12px;
+      border:1px solid var(--card-border);
+      box-shadow: 0 6px 26px rgba(3,6,14,0.5);
+      margin-top:6px;
+    }
+
+    /* Row and field layout */
+    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:8px}
+    .row.inline{align-items:center}
+    .row .field{min-width:160px}
+    /* Global label indent (8px default, schedule grid overrides to 2mm) */
+    .field > label:first-child{padding-left:8px;display:block;}
+    .card.schedule .row.inline .field > label:first-child{padding-left:2mm;}
+
+    /* Buttons: consistent vertical centering with asymmetric padding (text nudged up 1mm) */
+    .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:9999px;padding:7px 18px 9px 18px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;transition:transform .08s ease,box-shadow .12s ease,opacity .12s ease; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height:1.05;}
+    .btn-primary{background:linear-gradient(90deg,#22c55e,#16a34a);color:#05220f;box-shadow:var(--btn-elev);padding:7px 20px 9px 20px}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(16,185,129,0.14)}
+    /* Secondary button: subtle glass effect with theme border */
+    .btn-secondary{background:linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02));color:var(--text);border:1px solid var(--glass-border);padding:7px 18px 9px 18px;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.015),0 4px 14px rgba(2,6,23,0.5);backdrop-filter:blur(4px) saturate(1.1);white-space:nowrap;}
+    .btn-secondary:hover{transform:translateY(-2px);background:linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03));border-color:rgba(148,163,184,0.28);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.015),0 8px 24px rgba(2,6,23,0.6);}
+    .btn-secondary:active{transform:translateY(1px);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03),0 2px 10px rgba(2,6,23,0.55);}
+
+    /* Small text styling for hints and footer */
+    .hint{font-size:0.78rem;color:var(--muted);margin-top:4px}
+    .footer{text-align:center;margin-top:12px;font-size:0.78rem;color:#9aa4b2}
+
+    /* Toggle switches */
+    /* Toggle row container layout */
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 0}
+    .action-row{display:flex;align-items:stretch;gap:10px;margin-top:10px;flex-wrap:wrap}
+    .action-row .btn{margin:0}
+    .option-block{padding:6px 0 2px;border-bottom:1px solid var(--card-border)}
+    .option-block:last-child{border-bottom:none;padding-bottom:0}
+    .option-hint{font-size:0.76rem;color:var(--muted);line-height:1.55;margin:0 0 8px;padding-right:4px}
+    .option-hint .tag{display:inline-block;font-size:0.68rem;font-weight:700;padding:1px 6px;
+      border-radius:5px;margin-right:6px;vertical-align:1px;white-space:nowrap}
+    .tag-warn{background:rgba(251,191,36,0.14);color:#fbbf24;border:1px solid rgba(251,191,36,0.28)}
+    .tag-danger{background:rgba(239,68,68,0.14);color:#f87171;border:1px solid rgba(239,68,68,0.30)}
+    .tag-ok{background:rgba(34,197,94,0.12);color:#34d399;border:1px solid rgba(34,197,94,0.28)}
+    /* 危险操作按钮（清理预览/确认执行） */
+    .btn-danger{background:linear-gradient(90deg,#ef4444,#dc2626);color:#fff;
+      box-shadow:0 10px 30px rgba(239,68,68,0.18);padding:7px 20px 9px 20px}
+    .btn-danger:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(239,68,68,0.24)}
+    .btn-danger:active{transform:translateY(1px);box-shadow:0 2px 10px rgba(239,68,68,0.18)}
+    /* 风险说明文字：与标签同色系 */
+    .option-hint.is-warn{color:var(--warn-text)}
+    .option-hint.is-danger{color:var(--danger-text)}
+    .toggle-row span.label-text{font-size:0.9rem;color:var(--text)}
+    /* Switch container dimensions */
+    .switch{position:relative;display:inline-block;width:48px;height:26px;flex-shrink:0}
+    /* Hide native checkbox input */
+    .switch input{opacity:0;width:0;height:0}
+    /* Slider track background */
+    .slider{position:absolute;cursor:pointer;inset:0;background-color:#374151;border-radius:9999px;transition:.18s;border:1px solid rgba(0,0,0,0.25)}
+    /* Slider knob: 4px horizontal margin for equal spacing */
+    .slider:before{position:absolute;content:"";height:18px;width:18px;left:4px;bottom:4px;background-color:#fff;transition:.18s;border-radius:9999px;box-shadow:0 4px 12px rgba(2,6,23,0.55)}
+    /* Checked state styling with green gradient */
+    .switch input:checked + .slider{background:linear-gradient(90deg,var(--accent-strong),#16a34a);box-shadow:0 0 12px rgba(34,197,94,0.14)}
+    /* Move slider knob when checked */
+    .switch input:checked + .slider:before{transform:translateX(22px)}
+    /* Disabled state styling */
+    .switch input:disabled + .slider{opacity:0.4;cursor:default;box-shadow:none}
+
+    /* Toast notification styling (fixed position with animation) */
+    .toast {
+      position:fixed;
+      left:50%;
+      top:20px;
+      transform:translateX(-50%) translateY(-12px);
+      background: linear-gradient(90deg, rgba(34,197,94,0.12), rgba(14,165,233,0.08));
+      color: #e6fff0;
+      border: 1px solid rgba(34,197,94,0.18);
+      padding:14px 20px;
+      border-radius:12px;
+      box-shadow: 0 18px 50px rgba(2,6,23,0.6);
+      font-weight:700;
+      font-family: "Montserrat", Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      letter-spacing:0.2px;
+      opacity:0;
+      pointer-events:none;
+      transition: transform .28s cubic-bezier(.2,.9,.3,1), opacity .28s ease;
+      z-index:1200;
+      max-width:calc(100% - 48px);
+      text-align:center;
+    }
+    /* Toast visible state */
+    .toast.show {
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+      pointer-events:auto;
+    }
+
+    /* Toast close button */
+    .toast .close {
+      margin-left:12px;
+      background:transparent;
+      border:none;
+      color:inherit;
+      font-weight:800;
+      cursor:pointer;
+      opacity:0.9;
+    }
+
+    .btn-info {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      width: 36px;
+      height: 36px;
+      border-radius: 9999px;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    /* Shift info button left when logout button is present */
+    .header-buttons.has-logout .btn-info {
+      right: 125px;
+    }
+
+    .btn-info:hover {
+      background: rgba(14, 165, 233, 0.1);
+      color: #7dd3fc;
+      border-color: rgba(14, 165, 233, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-info svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    .btn-logout {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--glass-border);
+      padding: 8px 14px;
+      border-radius: 9999px;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-logout svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2.5;
+    }
+
+    /* Mobile responsive styles for smaller screens */
+    @media (max-width: 640px){
+      .container{padding:18px;border-radius:18px}
+      .row.inline{flex-direction:column;align-items:flex-start;gap:10px}
+      select,input[type="time"],input[type="number"]{width:100%}
+      .logo-wrap{width:80px;height:80px}
+      .wordmark{height:36px}
+      /* Statistics grid: 2 columns on mobile */
+      #stats-content > div:first-child{grid-template-columns:repeat(2,1fr)!important;}
+      /* Schedule grid: stack vertically on mobile */
+      .card.schedule .row.inline{grid-template-columns:1fr!important;gap:10px;}
+      .card.schedule .row.inline .field{width:100%;}
+      .btn-logout span { display: none; }
+      .btn-logout { padding: 8px; }
+      .header-buttons.has-logout .btn-info { right: 50px; }
+    }
+
+    /* Utility classes */
+    .muted{color:var(--muted)}
+    /* Screen reader only text (accessible but invisible) */
+    .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}
+    /* Collapsible notification panel */
+    #notif-card #notif-panel{transition:max-height .2s ease-out;overflow:hidden;will-change:max-height;transform:translateZ(0);}
+    #notif-card.collapsed #notif-panel{max-height:0!important;}
+    #notif-card:not(.collapsed) #notif-panel{max-height:900px;}
+    #notif-arrow{transition:transform .2s ease;will-change:transform;}
+    #notif-card.collapsed #notif-arrow{transform:rotate(0deg);}
+    #notif-card:not(.collapsed) #notif-arrow{transform:rotate(180deg);}
+    /* Collapsible Docker hosts panel */
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    #hosts-card #hosts-panel{transition:max-height .2s ease-out;overflow:hidden;will-change:max-height;transform:translateZ(0);}
+    #hosts-card.collapsed #hosts-panel{max-height:0!important;}
+    #hosts-card:not(.collapsed) #hosts-panel{max-height:800px;}
+    #hosts-arrow{transition:transform .2s ease;will-change:transform;}
+    #hosts-card.collapsed #hosts-arrow{transform:rotate(0deg);}
+    #hosts-card:not(.collapsed) #hosts-arrow{transform:rotate(180deg);}
+  </style>
+  <script>
+    /* 首屏前置：读取主题偏好，避免亮色用户看到深色闪一下 */
+    (function(){
+      var t = null;
+      try { t = localStorage.getItem('prunemate-theme'); } catch(e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+<body>
+  <!-- Retrieve flash messages from Flask session -->
+  {% set _flashes = get_flashed_messages(with_categories=false) %}
+  <!-- Toast notification for flash messages -->
+  <div id="toast" class="toast" data-message="{% if _flashes %}{{ _flashes[0] | e }}{% endif %}">
+    <span id="toast-text"></span>
+    <button id="toast-close" class="close" aria-label="关闭">&times;</button>
+  </div>
+
+  <!-- Main application container -->
+  <div class="container">
+    <!-- ⚠️ 安全警示（30 秒后自动收起为按钮，可手动展开/收起） -->
+    <div id="sec-warn" style="margin:0 0 16px 0;">
+      <div id="sec-warn-full" style="border:2px solid #dc2626;background:linear-gradient(90deg,rgba(220,38,38,0.10),rgba(220,38,38,0.04));border-radius:14px;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:1.1rem;">⚠️</span>
+            <strong style="color:#dc2626;font-size:1rem;">安全警示 · 请先读完再用</strong>
+          </div>
+          <button type="button" onclick="collapseSecWarn()" title="收起"
+            style="border:1px solid rgba(220,38,38,0.35);background:transparent;color:#dc2626;border-radius:999px;padding:3px 10px;font-size:0.76rem;cursor:pointer;">收起</button>
+        </div>
+        <div style="color:#dc2626;font-size:0.86rem;line-height:1.75;">
+          <div>· 本程序挂载了 <code style="background:rgba(220,38,38,0.10);padding:1px 5px;border-radius:4px;">/var/run/docker.sock</code>，容器内以 root 运行——<b>能控制它就等于能控制整台宿主机</b>。</div>
+          <div>· <b>只允许在内网使用</b>：不要做端口转发、内网穿透或公网映射；建议绑定内网网卡并配合防火墙。</div>
+          <div>· 首次登录后<b>立即修改默认密码</b>；Web 界面一旦被弱口令攻破，等同于宿主机被接管。</div>
+          <div>· 单机使用（只清理本机 Docker）时<b>不要安装网关、不要开放 2376</b>；管理外部主机才需要网关。</div>
+          <div>· 外部主机 CA 若使用「自动获取」属于<b>首次信任（TOFU）</b>，首次连接时可能被中间人利用；高安全环境请改为手动上传证书文件。</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:7px;font-size:0.78rem;color:#991b1b;cursor:pointer;">
+            <input type="checkbox" id="sec-warn-always" onchange="toggleSecAlways(this.checked)">
+            每次都显示（取消勾选则默认收起为警示按钮）
+          </label>
+          <span style="color:#991b1b;font-size:0.76rem;opacity:0.9;">详见 README「安全边界与部署建议」</span>
+        </div>
+      </div>
+
+      <button type="button" id="sec-warn-pill" onclick="expandSecWarn()"
+        style="display:none;border:1px solid rgba(220,38,38,0.5);background:rgba(220,38,38,0.10);
+               color:#dc2626;border-radius:999px;padding:6px 14px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+        ⚠️ 安全警示
+      </button>
+    </div>
+    <!-- Header buttons container -->
+    <div class="header-buttons {% if session.get('logged_in') %}has-logout{% endif %}">
+      <!-- Info button linking to website -->
+      <button type="button" id="theme-toggle" class="btn-theme" title="切换主题" aria-label="切换主题"></button>
+      <a href="https://prunemate.org" class="btn-info" target="_blank" rel="noopener noreferrer" title="访问 PruneMate 官方文档">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </a>
+      {% if session.get('logged_in') %}
+      <a href="{{ url_for('logout') }}" class="btn-logout" title="退出登录">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+        </svg>
+        <span>退出</span>
+      </a>
+      {% endif %}
+    </div>
+    <!-- Header with logo and title -->
+    <div class="header">
+      <div class="logo-wrap">
+        <img src="{{ url_for('static', filename='prunemate.png') }}"
+             alt="PruneMate 标志" />
+      </div>
+      <!-- Title block with SVG wordmark -->
+      <div class="title-block">
+        <h1 class="visually-hidden">PruneMate</h1>
+        <svg class="wordmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 48" role="img" aria-label="PruneMate">
+          <defs>
+            <style>
+              .wm { font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif; font-weight:700; font-size:40px; }
+              .blue { fill: #0ea5e9; }
+              .white { fill: #ffffff; }
+            </style>
+          </defs>
+          <text class="wm" x="0" y="36">
+            <tspan class="blue">Prune</tspan>
+            <tspan class="white" dx="-11">Mate</tspan>
+          </text>
+        </svg>
+        <p>定时清理 Docker 镜像与资源的小助手！</p>
+       </div>
+    </div>
+
+    <!-- 累计统计 Card -->
+    <h2 style="margin-top:0.8rem;font-size:0.95rem;">累计统计</h2>
+    <div class="card" id="stats-card" style="padding:12px;">
+      <div id="stats-loading" style="text-align:center;color:var(--muted);padding:6px;font-size:0.85rem;">
+        正在加载统计数据…
+      </div>
+      <div id="stats-content" style="display:none;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <!-- Total Space Reclaimed -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(14,165,233,0.04));border-radius:8px;border:1px solid rgba(34,197,94,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:var(--accent-strong);font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-space">0 B</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">累计释放</div>
+          </div>
+          
+          <!-- Prune Runs -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(14,165,233,0.06),rgba(99,102,241,0.04));border-radius:8px;border:1px solid rgba(14,165,233,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:var(--accent);font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-runs">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">清理次数</div>
+          </div>
+          
+          <!-- Containers Deleted -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(168,85,247,0.06),rgba(236,72,153,0.04));border-radius:8px;border:1px solid rgba(168,85,247,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:#c084fc;font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-containers">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">容器</div>
+          </div>
+          
+          <!-- Images Deleted -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(14,165,233,0.04));border-radius:8px;border:1px solid rgba(59,130,246,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:#60a5fa;font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-images">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">镜像</div>
+          </div>
+          
+          <!-- Networks Deleted -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(251,191,36,0.06),rgba(245,158,11,0.04));border-radius:8px;border:1px solid rgba(251,191,36,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:#fbbf24;font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-networks">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">网络</div>
+          </div>
+          
+          <!-- Volumes Deleted -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(239,68,68,0.06),rgba(220,38,38,0.04));border-radius:8px;border:1px solid rgba(239,68,68,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:#f87171;font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-volumes">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">数据卷</div>
+          </div>
+          
+          <!-- Build Cache Deleted -->
+          <div style="text-align:center;padding:6px;background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(16,185,129,0.04));border-radius:8px;border:1px solid rgba(34,197,94,0.1);">
+            <div style="font-size:1.3rem;font-weight:700;color:#34d399;font-family:'Montserrat',sans-serif;margin-bottom:1px;" id="stats-build-cache">0</div>
+            <div style="font-size:0.73rem;color:var(--muted);font-weight:600;">构建缓存</div>
+          </div>
+        </div>
+        
+        <!-- First and 上次运行 Dates -->
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border);display:flex;justify-content:space-around;flex-wrap:wrap;gap:8px;">
+          <div style="text-align:center;">
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:2px;">首次运行</div>
+            <div style="font-size:0.8rem;color:var(--text);font-weight:600;" id="stats-first">-</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:2px;">上次运行</div>
+            <div style="font-size:0.8rem;color:var(--text);font-weight:600;" id="stats-last">-</div>
+          </div>
+        </div>
+      </div>
+      <div id="stats-error" style="display:none;text-align:center;color:#f87171;padding:8px;font-size:0.9rem;">
+        统计数据加载失败
+      </div>
+    </div>
+
+    <!-- Main configuration form -->
+    <form method="post" action="{{ url_for('update') }}">
+      <!-- Schedule configuration section -->
+      <h2>清理计划</h2>
+      <div class="card schedule">
+        <!-- Toggle for enabling/disabling the schedule -->
+        <div class="toggle-row">
+          <span class="label-text">启用自动定时清理</span>
+          <label class="switch">
+            <input type="checkbox" name="schedule_enabled" id="schedule_enabled"
+                   {% if config.get('schedule_enabled', true) %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="row inline">
+          <!-- Frequency selector (daily/weekly/monthly) -->
+          <div class="field">
+            <label for="frequency">频率</label><br/>
+            <select id="frequency" name="frequency" aria-label="频率">
+              <option value="daily" {% if config.frequency == 'daily' %}selected{% endif %}>每天</option>
+              <option value="weekly" {% if config.frequency == 'weekly' %}selected{% endif %}>每周</option>
+              <option value="monthly" {% if config.frequency == 'monthly' %}selected{% endif %}>每月</option>
+            </select>
+          </div>
+
+          <!-- Time picker (24h or 12h format based on config) -->
+          <div class="field">
+            <label for="time"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="vertical-align:-3px;margin-right:5px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>时间</label><br />
+            {% if use_24h %}
+            <!-- Native 24-hour time picker -->
+            <input
+              type="time"
+              id="time"
+              name="time"
+              value="{{ config.time or '03:00' }}"
+              required
+            />
+            {% else %}
+            <!-- 12-hour time picker -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <input 
+                type="number" 
+                id="time-hour" 
+                name="time_hour" 
+                min="1" 
+                max="12" 
+                required 
+                style="width: 60px; text-align: center;"
+              />
+              <span style="font-weight: 600;">:</span>
+              <input 
+                type="number" 
+                id="time-minute" 
+                name="time_minute" 
+                min="0" 
+                max="59" 
+                required 
+                style="width: 60px; text-align: center;"
+              />
+              <select id="time-period" name="time_period" required style="width: auto; min-width: 80px;">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+              <input type="hidden" id="time" name="time" value="{{ config.time or '03:00' }}" />
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Day of week selector (shown for weekly frequency) -->
+          <div id="week-row" class="field" style="display:none;">
+            <label for="day_of_week">星期几</label><br/>
+            <select id="day_of_week" name="day_of_week">
+              {% set days = [
+                ('mon', '周一'),
+                ('tue', '周二'),
+                ('wed', '周三'),
+                ('thu', '周四'),
+                ('fri', '周五'),
+                ('sat', '周六'),
+                ('sun', '周日')
+              ] %}
+              {% for val, label in days %}
+                <option value="{{ val }}" {% if config.day_of_week == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Day of month selector (shown for monthly frequency) -->
+          <div id="month-row" class="field" style="display:none;">
+            <label for="day_of_month">每月几号</label><br/>
+            <input
+              type="number"
+              id="day_of_month"
+              name="day_of_month"
+              min="1"
+              max="31"
+              value="{{ config.day_of_month or 1 }}"
+            />
+          </div>
+          <!-- Placeholder for grid alignment when daily is selected -->
+          <div id="schedule-placeholder" class="field" style="display:none;"></div>
+        </div>
+       <!-- Timezone and time format information -->
+       <p class="hint" style="margin-top:8px;">
+         当前时区：{{ timezone }} · 时间格式：{{ '24 小时制' if use_24h else '12 小时制 (AM/PM)' }}<br>
+       </p>
+      </div>
+
+      <!-- Cleanup options section -->
+      <h2>清理选项</h2>
+      <div class="card">
+        <!-- 容器 -->
+        <div class="option-block">
+          <div class="toggle-row">
+            <span class="label-text">所有未使用的容器</span>
+            <label class="switch">
+              <input type="checkbox" name="prune_containers" id="prune_containers"
+                     {% if config.prune_containers %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="option-hint is-warn"><span class="tag tag-warn">建议关闭</span>只删除<b>已停止</b>的容器，运行中的不受影响。停止的容器里未保存的改动会一起消失，确认没有需要保留的停止状态容器再打开。</div>
+        </div>
+
+        <!-- 镜像 -->
+        <div class="option-block">
+          <div class="toggle-row">
+            <span class="label-text">所有未使用的镜像</span>
+            <label class="switch">
+              <input type="checkbox" name="prune_images" id="prune_images"
+                     {% if config.prune_images %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="option-hint is-warn"><span class="tag tag-warn">谨慎开启</span>删除<b>所有没有容器在用</b>的镜像，带标签的也删——比 docker 自带的悬空镜像清理更彻底。删掉旧版本镜像后无法回滚，建议先点「预览并运行」看清楚清单。</div>
+        </div>
+
+        <!-- 网络 -->
+        <div class="option-block">
+          <div class="toggle-row">
+            <span class="label-text">所有未使用的网络</span>
+            <label class="switch">
+              <input type="checkbox" name="prune_networks" id="prune_networks"
+                     {% if config.prune_networks %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="option-hint"><span class="tag tag-ok">建议开启</span>删除没有容器连接的 bridge 网络，自定义网络也在内。compose 下次启动容器时会自动重建，基本没有影响。</div>
+        </div>
+
+        <!-- 数据卷 -->
+        <div class="option-block">
+          <div class="toggle-row">
+            <span class="label-text">所有未使用的数据卷</span>
+            <label class="switch">
+              <input type="checkbox" name="prune_volumes" id="prune_volumes"
+                     {% if config.prune_volumes %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="option-hint is-danger"><span class="tag tag-danger">强烈建议关闭</span>删除<b>所有</b>未挂载到容器的数据卷，卷里的数据<b>永久丢失</b>、无法恢复。容器停止、升级或 compose down 期间，它的卷都会变成"未引用"，下一次定时任务就会被清掉——本机历史上已经删掉 120 个卷。</div>
+        </div>
+
+        <!-- 构建缓存 -->
+        <div class="option-block">
+          <div class="toggle-row">
+            <span class="label-text">所有构建缓存</span>
+            <label class="switch">
+              <input type="checkbox" name="prune_build_cache" id="prune_build_cache"
+                     {% if config.prune_build_cache %}checked{% endif %}>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="option-hint"><span class="tag tag-ok">建议开启</span>清理 BuildKit 构建缓存，只影响下次构建的速度，不影响运行中的容器和已有镜像。</div>
+        </div>
+      </div>
+
+      <!-- Docker Hosts Management Section -->
+      <h2>Docker 主机</h2>
+      <!-- Collapsible Docker hosts card -->
+      <div class="card collapsed" id="hosts-card">
+        <!-- Collapsible header button -->
+        <button type="button" id="hosts-header" aria-expanded="false" aria-controls="hosts-panel"
+          style="all:unset;display:flex;width:100%;cursor:pointer;align-items:center;justify-content:space-between;padding:4px 0 8px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="flex-shrink:0;">
+              <rect width="20" height="8" x="2" y="2" rx="2"></rect>
+              <rect width="20" height="8" x="2" y="14" rx="2"></rect>
+              <line x1="6" x2="6.01" y1="6" y2="6"></line>
+              <line x1="6" x2="6.01" y1="18" y2="18"></line>
+            </svg>
+            <div>
+              <strong>外部 Docker 主机</strong>
+              <div class="hint">通过 TCP docker-socket-proxy 连接远程 Docker 主机</div>
+            </div>
+          </div>
+          <span id="hosts-arrow" style="font-size:1.05rem;transition:.2s;">▼</span>
+        </button>
+
+        <!-- Collapsible hosts panel -->
+        <div id="hosts-panel" style="overflow:hidden;">
+          <div style="display:flex;justify-content:flex-end;margin:10px 0 4px 0;">
+            <button type="button" id="refresh-hosts-btn" onclick="refreshAll()"
+              style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--card-border);background:rgba(14,165,233,0.06);color:var(--text);border-radius:999px;cursor:pointer;font-size:0.8rem;">
+              <svg id="refresh-hosts-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-3-6.7"></path><polyline points="21 3 21 9 15 9"></polyline>
+              </svg>
+              <span id="refresh-hosts-text">刷新统计</span>
+            </button>
+          </div>
+          <p style="color:var(--muted);font-size:0.9rem;margin:12px 0;">
+            外部主机需要在对面运行 <a href="https://github.com/Tecnativa/docker-socket-proxy" target="_blank" style="color:#0ea5e9;text-decoration:none;">docker-socket-proxy</a>。两种填法：<br>
+① <code style="background:rgba(14,165,233,0.08);padding:2px 6px;border-radius:4px;font-size:0.85rem;">https://host:2376</code> —— 用本项目的网关包，TLS + 令牌，需要在 PruneMate 容器里配 <code style="background:rgba(14,165,233,0.08);padding:2px 6px;border-radius:4px;font-size:0.85rem;">PRUNEMATE_HOST_TOKEN</code> 和 <code style="background:rgba(14,165,233,0.08);padding:2px 6px;border-radius:4px;font-size:0.85rem;">REQUESTS_CA_BUNDLE</code>（<b>推荐</b>）<br>
+② <code style="background:rgba(14,165,233,0.08);padding:2px 6px;border-radius:4px;font-size:0.85rem;">tcp://host:2375</code> —— 第三方明文 proxy，无加密无认证，仅限完全可信的内网
+          </p>
+          
+          <!-- Hosts List -->
+          <div id="hosts-list" style="margin-bottom:16px;">
+            <!-- Populated by JavaScript -->
+          </div>
+          
+          <!-- Add New Host Form -->
+          <div style="border-top:1px solid var(--card-border);padding-top:12px;margin-top:12px;">
+            <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text);">添加新主机</h3>
+            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:10px;align-items:end;">
+              <div class="field">
+                <label for="new-host-name">名称</label>
+                <input type="text" id="new-host-name" name="new-host-name" placeholder="服务器 1" style="width:100%;" />
+              </div>
+              <div class="field">
+                <label for="new-host-url">地址</label>
+                <input type="text" id="new-host-url" name="new-host-url" placeholder="tcp://192.168.1.10:2375" style="width:100%;" />
+              </div>
+              <button type="button" onclick="addNewHost()" class="btn btn-secondary" style="margin:0;">添加主机</button>
+            </div>
+            <input type="hidden" id="new-host-ca" value="" />
+            <input type="hidden" id="edit-host-index" value="" />
+            <div id="edit-hint" style="display:none;margin-top:8px;font-size:0.82rem;color:#f59e0b;">
+              正在编辑主机：<b id="edit-host-name"></b> —— 令牌与 CA 留空表示不修改
+              <button type="button" onclick="cancelEditHost()"
+                style="margin-left:8px;border:1px solid var(--card-border);background:transparent;color:var(--text);border-radius:999px;padding:3px 10px;font-size:0.76rem;cursor:pointer;">取消编辑</button>
+            </div>
+            <div class="field" style="margin-top:10px;">
+              <label for="new-host-token">访问令牌（用 https 网关时必填）</label>
+              <input type="password" id="new-host-token" autocomplete="off"
+                     placeholder="网关 client-info.txt 里那串" style="width:100%;" />
+            </div>
+
+            <!-- 每台主机独立的 CA：选文件或按地址自动获取，随主机一起提交 -->
+            <div class="field" style="margin-top:14px;">
+              <label>该主机的 CA 证书（https 必填，每台网关各一份）</label>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <input type="file" id="ca_file_input" accept=".crt,.pem,.cer,.txt" style="display:none;"
+                       onchange="loadCaFile(this.files[0]); this.value='';">
+                <button type="button" class="btn btn-secondary" style="margin:0;"
+                        onclick="document.getElementById('ca_file_input').click()">选择证书文件</button>
+                {% if auto_fetch_ca %}
+                <button type="button" class="btn btn-secondary" style="margin:0;"
+                        onclick="fetchCa()">按地址自动获取</button>
+                {% endif %}
+                <span id="ca_status" style="font-size:0.82rem;color:var(--muted);">未选择</span>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--muted);margin:10px 0 0;cursor:pointer;">
+                <input type="checkbox" id="auto_ca_toggle" {% if auto_fetch_ca %}checked{% endif %}
+                       onchange="saveAutoCa(this.checked)">
+                允许添加时自动从网关获取 CA（首次信任，方便但有中间人风险）
+              </label>
+              <p style="font-size:0.8rem;color:var(--muted);margin:8px 0 0;">
+                这台主机只信任自己这份 CA，不会因为别的网关 CA 被信任而扩大信任面。
+                {% if auto_fetch_ca %}
+                <strong>留空也可以</strong>：添加时会自动从网关的 2377 只读页取（首次信任）。
+                {% else %}
+                留空则不会自动获取，请手动选择文件。
+                {% endif %}
+              </p>
+            </div>
+        </div>
+      </div>
+
+      <!-- Notifications configuration section -->
+      <h2>通知</h2>
+      <!-- Collapsible notification settings card -->
+      <div class="card collapsed" id="notif-card">
+        <!-- Collapsible header button -->
+        <button type="button" id="notif-header" aria-expanded="false" aria-controls="notif-panel"
+          style="all:unset;display:flex;width:100%;cursor:pointer;align-items:center;justify-content:space-between;padding:4px 0 8px 0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" style="flex-shrink:0;">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+              <path d="M10 21h4"></path>
+            </svg>
+            <div>
+              <strong>通知设置</strong>
+              <div class="hint">选择推送服务并填写参数</div>
+            </div>
+          </div>
+          <span id="notif-arrow" style="font-size:1.05rem;transition:.2s;">▼</span>
+        </button>
+
+        <!-- Collapsible notification settings panel -->
+        <div id="notif-panel" style="overflow:hidden;">
+          <div class="row inline" style="margin-top:4px;">
+            <!-- Notification provider selector -->
+            <div class="field" style="flex:0 0 auto;min-width:150px;max-width:200px;">
+              <label for="notifications_provider">推送服务</label><br/>
+              <select id="notifications_provider" name="notifications_provider" aria-label="通知推送服务" style="width:100%;">
+                <option value="gotify" {% if config.notifications.provider == 'gotify' %}selected{% endif %}>Gotify</option>
+                <option value="ntfy" {% if config.notifications.provider == 'ntfy' %}selected{% endif %}>ntfy</option>
+                <option value="discord" {% if config.notifications.provider == 'discord' %}selected{% endif %}>Discord</option>
+                <option value="telegram" {% if config.notifications.provider == 'telegram' %}selected{% endif %}>Telegram</option>
+              </select>
+            </div>
+            <!-- Notification priority selector -->
+            <div class="field" style="flex:0 0 auto;min-width:120px;">
+              <label for="notification_priority">优先级</label><br/>
+              <select 
+                id="notification_priority" 
+                name="notification_priority"
+                style="width: 100px;"
+                aria-label="通知优先级"
+              >
+                <option value="low" {% if config.notifications.priority == 'low' %}selected{% endif %}>低</option>
+                <option value="medium" {% if config.notifications.priority == 'medium' %}selected{% endif %}>中</option>
+                <option value="high" {% if config.notifications.priority == 'high' %}selected{% endif %}>高</option>
+              </select>
+            </div>
+          </div>
+          <!-- 'Only notify when changes' toggle (dynamically repositioned per provider) -->
+          <div id="only-on-changes-wrapper" style="margin-top:6px;">
+            <div class="toggle-row" style="padding:4px 0 0 0;">
+              <span class="label-text" id="only-on-changes-label">仅在有清理内容时通知</span>
+              <label class="switch">
+                <input type="checkbox" name="notifications_only_on_changes" id="notifications_only_on_changes" aria-labelledby="only-on-changes-label" {% if config.notifications.only_on_changes %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="hint" style="margin:2px 0 14px 0; text-align:right;">*关闭后，PruneMate 每次运行都会发送通知。</div>
+          </div>
+
+          <!-- Gotify specific fields -->
+          <div id="gotify-fields" style="margin-top:12px;">
+            <div class="toggle-row">
+              <span class="label-text" id="gotify-enable-label">启用 Gotify 通知</span>
+              <label class="switch">
+                <input type="checkbox" name="gotify_enabled" id="gotify_enabled" aria-labelledby="gotify-enable-label"
+                       {% if config.notifications.gotify.enabled %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="gotify_url">Gotify 地址：</label>
+                <input type="text" id="gotify_url" name="gotify_url"
+                       value="{{ config.notifications.gotify.url or '' }}"
+                       placeholder="https://gotify.example.com" aria-label="Gotify 服务器地址">
+              </div>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="gotify_token">Gotify 应用令牌：</label>
+                <input type="password" id="gotify_token" name="gotify_token" autocomplete="off"
+                       value="{{ config.notifications.gotify.token or '' }}"
+                       placeholder="应用令牌" aria-label="Gotify 应用令牌">
+              </div>
+            </div>
+          </div>
+
+          <!-- ntfy specific fields -->
+          <div id="ntfy-fields" style="margin-top:12px;display:none;">
+            <div class="toggle-row">
+              <span class="label-text" id="ntfy-enable-label">启用 ntfy 通知</span>
+              <label class="switch">
+                <input type="checkbox" name="ntfy_enabled" id="ntfy_enabled" aria-labelledby="ntfy-enable-label"
+                       {% if config.notifications.ntfy.enabled %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="ntfy_url">ntfy 地址：</label>
+                <input type="text" id="ntfy_url" name="ntfy_url"
+                       value="{{ config.notifications.ntfy.url or '' }}"
+                       placeholder="https://ntfy.sh" aria-label="ntfy 服务器地址">
+              </div>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="ntfy_topic">ntfy 主题：</label>
+                <input type="text" id="ntfy_topic" name="ntfy_topic"
+                       value="{{ config.notifications.ntfy.topic or '' }}"
+                       placeholder="topic/name" aria-label="ntfy 主题名称">
+              </div>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="ntfy_token">ntfy 令牌（可选）：</label>
+                <input type="password" id="ntfy_token" name="ntfy_token"
+                       value="{{ config.notifications.ntfy.token or '' }}"
+                       placeholder="Bearer 令牌（可选）" aria-label="ntfy Bearer 令牌">
+              </div>
+            </div>
+          </div>
+
+          <!-- Discord specific fields -->
+          <div id="discord-fields" style="margin-top:12px;display:none;">
+            <div class="toggle-row">
+              <span class="label-text" id="discord-enable-label">启用 Discord 通知</span>
+              <label class="switch">
+                <input type="checkbox" name="discord_enabled" id="discord_enabled" aria-labelledby="discord-enable-label"
+                       {% if config.notifications.discord.enabled %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="discord_webhook_url">Discord Webhook 地址：</label>
+                <input type="text" id="discord_webhook_url" name="discord_webhook_url"
+                       value="{{ config.notifications.discord.webhook_url or '' }}"
+                       placeholder="https://discord.com/api/webhooks/..." aria-label="Discord Webhook 地址">
+              </div>
+            </div>
+          </div>
+
+          <!-- Telegram specific fields -->
+          <div id="telegram-fields" style="margin-top:12px;display:none;">
+            <div class="toggle-row">
+              <span class="label-text" id="telegram-enable-label">启用 Telegram 通知</span>
+              <label class="switch">
+                <input type="checkbox" name="telegram_enabled" id="telegram_enabled" aria-labelledby="telegram-enable-label"
+                       {% if config.notifications.telegram.enabled %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="telegram_bot_token">机器人 Token：</label>
+                <input type="password" id="telegram_bot_token" name="telegram_bot_token" autocomplete="off"
+                       value="{{ config.notifications.telegram.bot_token or '' }}"
+                       placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" aria-label="来自 @BotFather 的 Telegram 机器人令牌">
+              </div>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <div style="flex:1;">
+                <label for="telegram_chat_id">会话 ID：</label>
+                <input type="text" id="telegram_chat_id" name="telegram_chat_id"
+                       value="{{ config.notifications.telegram.chat_id or '' }}"
+                       placeholder="123456789 或 @频道名" aria-label="Telegram 会话 ID 或频道用户名">
+              </div>
+            </div>
+          </div>
+
+          <!-- Test notification button -->
+          <div style="margin-top:12px;">
+            <button type="submit"
+                    class="btn btn-secondary"
+                    formaction="{{ url_for('test_notification') }}"
+                    formmethod="post">
+              发送测试通知
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作按钮：保存 / 预览，同一行等高 -->
+      <div class="action-row">
+        <button type="submit" class="btn btn-primary">
+          保存并应用计划
+        </button>
+        <button type="button" class="btn btn-danger" onclick="showPrunePreview()">
+          预览并运行
+        </button>
+      </div>
+    </form>
+
+    <!-- Manual prune trigger form -->
+    <form method="post" action="{{ url_for('run_now') }}" style="margin-top: 6px; display: none;" id="old-run-form" onsubmit="setTimeout(loadStats, 1000);">
+      <button type="submit" class="btn btn-secondary">
+        立即运行
+      </button>
+    </form>
+
+    <!-- Application footer -->
+    <div class="footer">
+      PruneMate · 2026 · V1.4.0 · 
+      <a href="https://github.com/anoniemerd/PruneMate" target="_blank">GitHub</a> ·
+      <a href="https://prunemate.org" target="_blank">Prunemate.org</a>
+    </div>
+  </div>
+
+  <!-- Prune Preview Modal -->
+  <div id="prunePreviewModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); z-index: 1000; overflow-y: auto; padding: 20px;">
+    <div style="max-width: 900px; margin: 40px auto; background: linear-gradient(180deg, rgba(18,25,44,0.98), rgba(8,12,22,0.98)); border-radius: 24px; padding: 28px; border: 1px solid rgba(148,163,184,0.15); box-shadow: 0 32px 70px rgba(0,0,0,0.75);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.5rem; color: var(--text);">🔍 清理预览</h2>
+        <button onclick="closePrunePreview()" style="background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: all 0.2s;">&times;</button>
+      </div>
+      
+      <div id="previewContent" style="min-height: 200px;">
+        <div style="text-align: center; padding: 40px; color: var(--muted);">
+          <div style="font-size: 2rem; margin-bottom: 12px;">⏳</div>
+          <p>正在加载预览…</p>
+        </div>
+      </div>
+      
+      <div id="previewActions" style="display: flex; flex-direction: row; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(148,163,184,0.1); gap: 12px; justify-content: flex-end; visibility: hidden;">
+        <button onclick="closePrunePreview()" class="btn" style="background: rgba(148,163,184,0.08); color: var(--text);">取消</button>
+        <button onclick="executeConfirmedPrune()" class="btn btn-danger" id="confirmPruneBtn" style="display: none;">
+          ✓ 确认并执行
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Show appropriate day selector (week/month) or placeholder based on frequency
+    function updateScheduleVisibility() {
+      const freq = document.getElementById('frequency').value;
+      const weekRow = document.getElementById('week-row');
+      const monthRow = document.getElementById('month-row');
+      const placeholder = document.getElementById('schedule-placeholder');
+
+      if(freq === 'weekly'){
+        weekRow.style.display = 'flex';
+        monthRow.style.display = 'none';
+        placeholder.style.display = 'none';
+      } else if(freq === 'monthly'){
+        weekRow.style.display = 'none';
+        monthRow.style.display = 'flex';
+        placeholder.style.display = 'none';
+      } else { // daily
+        weekRow.style.display = 'none';
+        monthRow.style.display = 'none';
+        placeholder.style.display = 'flex';
+      }
+    }
+
+    // Clamp day_of_month input to valid range (1–31)
+    function initDayOfMonthClamp(){
+      const domInput = document.getElementById('day_of_month');
+      if (!domInput) return;
+      // Validate and clamp day value
+      const clamp = () => {
+        const v = domInput.value.trim();
+        if (v === '') return;
+        let n = parseInt(v, 10);
+        if (Number.isNaN(n)) { domInput.value = 1; return; }
+        if (n < 1) n = 1;
+        if (n > 31) n = 31;
+        if (String(n) !== domInput.value) domInput.value = n;
+      };
+      // Live validation while typing
+      domInput.addEventListener('input', () => {
+        const v = domInput.value;
+        const n = parseInt(v, 10);
+        if (!Number.isNaN(n) && (n < 1 || n > 31)) {
+          domInput.value = Math.max(1, Math.min(31, n));
+        }
+      });
+      // Final validation when input loses focus
+      domInput.addEventListener('blur', clamp);
+      clamp();
+    }
+
+    // Clamp time hour/minute inputs for 12h format
+    function initTimeClamp(){
+      const hourInput = document.getElementById('time-hour');
+      const minuteInput = document.getElementById('time-minute');
+      if (!hourInput || !minuteInput) return;
+      
+      // Hour: 1-12, max 2 digits
+      const clampHour = () => {
+        let v = hourInput.value.trim();
+        if (v === '') return;
+        // Limit to 2 digits
+        if (v.length > 2) v = v.slice(0, 2);
+        let n = parseInt(v, 10);
+        if (Number.isNaN(n)) { hourInput.value = 12; return; }
+        if (n < 1) n = 1;
+        if (n > 12) n = 12;
+        hourInput.value = n;
+      };
+      // Limit hour input length and validate range while typing
+      hourInput.addEventListener('input', () => {
+        let v = hourInput.value;
+        if (v.length > 2) {
+          hourInput.value = v.slice(0, 2);
+          v = hourInput.value;
+        }
+        const n = parseInt(v, 10);
+        if (!Number.isNaN(n) && (n < 1 || n > 12)) {
+          hourInput.value = Math.max(1, Math.min(12, n));
+        }
+      });
+      // Final hour validation when input loses focus
+      hourInput.addEventListener('blur', clampHour);
+      
+      // Minute: 0-59, max 2 digits
+      const clampMinute = () => {
+        let v = minuteInput.value.trim();
+        if (v === '') { minuteInput.value = '00'; return; }
+        // Limit to 2 digits
+        if (v.length > 2) v = v.slice(0, 2);
+        let n = parseInt(v, 10);
+        if (Number.isNaN(n)) { minuteInput.value = '00'; return; }
+        if (n < 0) n = 0;
+        if (n > 59) n = 59;
+        minuteInput.value = String(n).padStart(2, '0');
+      };
+      // Limit minute input length and validate range while typing
+      minuteInput.addEventListener('input', () => {
+        let v = minuteInput.value;
+        if (v.length > 2) {
+          minuteInput.value = v.slice(0, 2);
+          v = minuteInput.value;
+        }
+        const n = parseInt(v, 10);
+        if (!Number.isNaN(n) && (n < 0 || n > 59)) {
+          minuteInput.value = String(Math.max(0, Math.min(59, n))).padStart(2, '0');
+        }
+      });
+      // Final minute validation when input loses focus
+      minuteInput.addEventListener('blur', clampMinute);
+      
+      // Initialize values on load
+      clampHour();
+      clampMinute();
+    }
+
+    // Display and auto-hide flash message toast
+    (function initToast() {
+      try {
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        const msg = toast.dataset.message || '';
+        const textEl = document.getElementById('toast-text');
+        const closeBtn = document.getElementById('toast-close');
+
+        // Exit early if no message to display
+        if (!msg) {
+          toast.classList.remove('show');
+          return;
+        }
+
+        // Display toast with animation
+        textEl.textContent = msg;
+        requestAnimationFrame(() => toast.classList.add('show'));
+
+        // Auto-hide after 5 seconds & Hide toast notification
+        const hide = () => toast.classList.remove('show');
+        const timer = setTimeout(hide, 5000);
+
+        // Manual close button handler
+        closeBtn.addEventListener('click', () => {
+          clearTimeout(timer);
+          hide();
+        });
+
+        // Close toast when Escape key is pressed
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            clearTimeout(timer);
+            hide();
+          }
+        }, { once: true });
+      } catch (e) {
+        console.warn('Toast init failed', e);
+      }
+    })();
+
+    // Show fields for the selected notification provider
+    function updateNotifUI(){
+      const prov = document.getElementById('notifications_provider').value;
+      const gotifyBlock = document.getElementById('gotify-fields');
+      const ntfyBlock = document.getElementById('ntfy-fields');
+      const discordBlock = document.getElementById('discord-fields');
+      const telegramBlock = document.getElementById('telegram-fields');
+      const toggleWrapper = document.getElementById('only-on-changes-wrapper');
+      if(!gotifyBlock || !ntfyBlock || !discordBlock || !telegramBlock || !toggleWrapper) return;
+      // Show Gotify fields and position toggle
+      if(prov === 'gotify'){
+        gotifyBlock.style.display = 'block';
+        ntfyBlock.style.display = 'none';
+        discordBlock.style.display = 'none';
+        telegramBlock.style.display = 'none';
+        if(gotifyBlock.firstElementChild){
+          gotifyBlock.insertBefore(toggleWrapper, gotifyBlock.firstElementChild.nextSibling);
+        } else {
+          gotifyBlock.appendChild(toggleWrapper);
+        }
+      // Show ntfy fields and position toggle
+      } else if(prov === 'ntfy'){
+        gotifyBlock.style.display = 'none';
+        ntfyBlock.style.display = 'block';
+        discordBlock.style.display = 'none';
+        telegramBlock.style.display = 'none';
+        if(ntfyBlock.firstElementChild){
+          ntfyBlock.insertBefore(toggleWrapper, ntfyBlock.firstElementChild.nextSibling);
+        } else {
+          ntfyBlock.appendChild(toggleWrapper);
+        }
+      // Show Discord fields and position toggle
+      } else if(prov === 'discord'){
+        gotifyBlock.style.display = 'none';
+        ntfyBlock.style.display = 'none';
+        discordBlock.style.display = 'block';
+        telegramBlock.style.display = 'none';
+        if(discordBlock.firstElementChild){
+          discordBlock.insertBefore(toggleWrapper, discordBlock.firstElementChild.nextSibling);
+        } else {
+          discordBlock.appendChild(toggleWrapper);
+        }
+      // Show Telegram fields and position toggle
+      } else if(prov === 'telegram'){
+        gotifyBlock.style.display = 'none';
+        ntfyBlock.style.display = 'none';
+        discordBlock.style.display = 'none';
+        telegramBlock.style.display = 'block';
+        if(telegramBlock.firstElementChild){
+          telegramBlock.insertBefore(toggleWrapper, telegramBlock.firstElementChild.nextSibling);
+        } else {
+          telegramBlock.appendChild(toggleWrapper);
+        }
+      }
+    }
+
+    // Manage collapsible notification settings panel
+    function initNotificationCollapse(){
+      const notifCard = document.getElementById('notif-card');
+      const notifHeader = document.getElementById('notif-header');
+      const notifPanel = document.getElementById('notif-panel');
+      const notifArrow = document.getElementById('notif-arrow');
+      if(!notifCard || !notifHeader || !notifPanel) return;
+      // Toggle notification panel open/closed
+      function setNotif(open){
+        if(open){
+          notifCard.classList.remove('collapsed');
+          // Use scrollHeight for smooth transition
+          notifPanel.style.maxHeight = notifPanel.scrollHeight + 40 + 'px';
+          notifHeader.setAttribute('aria-expanded','true');
+        } else {
+          notifCard.classList.add('collapsed');
+          notifPanel.style.maxHeight = '0px';
+          notifHeader.setAttribute('aria-expanded','false');
+        }
+      }
+      // Start with panel collapsed
+      setNotif(false);
+      notifHeader.addEventListener('click', () => {
+        // Toggle panel state on click
+        const isOpen = notifHeader.getAttribute('aria-expanded') === 'true';
+        setNotif(!isOpen);
+      });
+    }
+
+    // Load and display all-time statistics
+    async function parseJsonSafe(response) {
+      const ct = response.headers.get('content-type') || '';
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error('HTTP ' + response.status + (text ? '：' + text.slice(0, 120) : ''));
+      }
+      if (ct.indexOf('json') === -1) {
+        const text = await response.text();
+        throw new Error('服务端返回的不是 JSON（可能是登录过期或服务异常）：' + text.slice(0, 120));
+      }
+      return response.json();
+    }
+
+    function loadStats(){
+      const loading = document.getElementById('stats-loading');
+      const content = document.getElementById('stats-content');
+      const error = document.getElementById('stats-error');
+      
+      return fetch('/stats')
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to fetch stats');
+          return response.json();
+        })
+        .then(data => {
+          // Hide loading, show content
+          loading.style.display = 'none';
+          content.style.display = 'block';
+          error.style.display = 'none';
+          
+          // Helper to format bytes to human-readable format
+          function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let num = bytes;
+            let unitIndex = 0;
+            while (num >= 1024 && unitIndex < units.length - 1) {
+              num /= 1024;
+              unitIndex++;
+            }
+            return num.toFixed(1) + ' ' + units[unitIndex];
+          }
+          
+          // Helper to format date
+          function formatDate(isoString) {
+            if (!isoString) return '-';
+            try {
+              const date = new Date(isoString);
+              if (isNaN(date.getTime())) return '-';
+              
+              // Format: DD-MM-YYYY HH:MM (24h) or DD-MM-YYYY h:MM AM/PM (12h)
+              const day = String(date.getDate()).padStart(2, '0');
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const year = date.getFullYear();
+              const mins = String(date.getMinutes()).padStart(2, '0');
+              
+              {% if use_24h %}
+              // 24-hour format
+              const hoursFormatted = String(date.getHours()).padStart(2, '0');
+              return `${day}-${month}-${year} ${hoursFormatted}:${mins}`;
+              {% else %}
+              // 12-hour format with AM/PM
+              const rawHrs = date.getHours();
+              const period = rawHrs >= 12 ? 'PM' : 'AM';
+              const hoursFormatted = rawHrs % 12 || 12;
+              return `${day}-${month}-${year} ${hoursFormatted}:${mins} ${period}`;
+              {% endif %}
+            } catch (e) {
+              return '-';
+            }
+          }
+          
+          // Update all stat displays
+          document.getElementById('stats-space').textContent = formatBytes(data.total_space_reclaimed || 0);
+          document.getElementById('stats-runs').textContent = data.prune_runs || 0;
+          document.getElementById('stats-containers').textContent = data.containers_deleted || 0;
+          document.getElementById('stats-images').textContent = data.images_deleted || 0;
+          document.getElementById('stats-networks').textContent = data.networks_deleted || 0;
+          document.getElementById('stats-volumes').textContent = data.volumes_deleted || 0;
+          document.getElementById('stats-build-cache').textContent = data.build_cache_deleted || 0;
+          document.getElementById('stats-first').textContent = formatDate(data.first_run);
+          document.getElementById('stats-last').textContent = formatDate(data.last_run);
+        })
+        .catch(err => {
+          console.error('Error loading stats:', err);
+          if (loading) loading.style.display = 'none';
+          if (content) content.style.display = 'block';
+          if (error) {
+            error.style.display = 'block';
+            error.textContent = '统计数据加载失败：' + (err && err.message ? err.message : err);
+          }
+        });
+    }
+
+function timeAgo(iso) {
+  if (!iso) return '未知时间';
+  try {
+    const t = new Date(iso).getTime();
+    if (isNaN(t)) return '未知时间';
+    const diff = Math.max(0, Date.now() - t);
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return '刚刚';
+    if (min < 60) return min + ' 分钟前';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + ' 小时前';
+    return Math.floor(hr / 24) + ' 天前';
+  } catch (e) { return '未知时间'; }
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('refresh-hosts-btn');
+  const icon = document.getElementById('refresh-hosts-icon');
+  const txt = document.getElementById('refresh-hosts-text');
+  if (btn) btn.disabled = true;
+  if (icon) icon.style.animation = 'spin 1s linear infinite';
+  if (txt) txt.textContent = '刷新中…';
+  document.querySelectorAll('.host-info-line').forEach(function(el){
+    el.textContent = '统计中…';
+    el.style.color = 'var(--muted)';
+  });
+  try {
+    await Promise.all([
+      loadStats(),
+      Promise.resolve(refreshHostStatuses()),
+      refreshHostOverview()
+    ]);
+    if (txt) txt.textContent = '已刷新';
+    setTimeout(function(){ if (txt) txt.textContent = '刷新统计'; }, 1500);
+  } catch (e) {
+    if (txt) txt.textContent = '刷新失败';
+    console.error('refreshAll:', e);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (icon) icon.style.animation = '';
+  }
+}
+
+    async function refreshHostOverview(){
+      const lines = Array.from(document.querySelectorAll('.host-info-line'));
+      if (!lines.length) return;
+      try {
+        const r = await fetch('/hosts/overview');
+        const data = await r.json();
+        const byName = {};
+        (data.hosts || []).forEach(h => { byName[h.name] = h; });
+        lines.forEach(el => {
+          try {
+            const name = el.dataset.hostName || '';
+            const o = byName[name];
+            if (!o) { el.textContent = '未获取到该主机数据'; return; }
+            if (!o.online) {
+              el.textContent = '离线' + (o.error ? ' · ' + o.error : '');
+              el.style.color = '#ef4444';
+              return;
+            }
+            el.textContent = '容器 ' + o.containers + '（运行 ' + o.running + '） · 镜像 ' + o.images
+                          + '（占用 ' + (o.layers_h || '-') + '） · 可回收 ' + o.space_h;
+            el.style.color = 'var(--muted)';
+            if (o.last && (o.last.space > 0 || (o.last.images||0) + (o.last.containers||0)
+                           + (o.last.networks||0) + (o.last.volumes||0) + (o.last.build_cache||0) > 0)) {
+              const l = o.last;
+              const parts = [];
+              if (l.containers) parts.push('容器 ' + l.containers);
+              if (l.images) parts.push('镜像 ' + l.images);
+              if (l.networks) parts.push('网络 ' + l.networks);
+              if (l.volumes) parts.push('数据卷 ' + l.volumes);
+              if (l.build_cache) parts.push('缓存 ' + l.build_cache);
+              el.textContent += '｜上次清理：' + (parts.join(' / ') || '无对象')
+                              + '，释放 ' + (l.space_h || '-') + '（' + timeAgo(l.at) + '）';
+            }
+          } catch (err) {
+            el.textContent = '渲染失败：' + err.message;
+            el.style.color = '#ef4444';
+          }
+        });
+      } catch (e) {
+        lines.forEach(el => { el.textContent = '概览获取失败：' + e.message; el.style.color = '#ef4444'; });
+      }
+    }
+
+    let hostStatusCheckInProgress = false;
+
+    function refreshHostStatuses(){
+      const statusDots = Array.from(document.querySelectorAll('#hosts-list .host-status-dot'));
+      if (!statusDots.length || hostStatusCheckInProgress) return;
+
+      hostStatusCheckInProgress = true;
+      const dotsByIndex = new Map(statusDots.map(dot => [Number(dot.dataset.hostIndex), dot]));
+
+      fetch('/hosts/status')
+        .then(response => {
+          if (!response.ok) throw new Error('检查 Docker 主机失败');
+          return response.json();
+        })
+        .then(data => {
+          const statusStyles = {
+            online: { color: '#22c55e', title: '在线' },
+            offline: { color: '#ef4444', title: '离线：Docker ping 失败' },
+            disabled: { color: '#6b7280', title: '已停用' }
+          };
+
+          (data.statuses || []).forEach(hostStatus => {
+            const dot = dotsByIndex.get(hostStatus.index);
+            const style = statusStyles[hostStatus.status];
+            if (!dot || !dot.isConnected || !style) return;
+            dot.style.backgroundColor = style.color;
+            dot.title = style.title;
+          });
+        })
+        .catch(() => {
+          statusDots.forEach(dot => {
+            if (dot.isConnected && dot.dataset.enabled === 'true') {
+              dot.style.backgroundColor = '#f59e0b';
+              dot.title = '状态不可用';
+            }
+          });
+        })
+        .finally(() => {
+          hostStatusCheckInProgress = false;
+        });
+    }
+
+    // Load and display Docker hosts
+    function loadHosts(){
+      const hostsList = document.getElementById('hosts-list');
+      if (!hostsList) return;
+      
+      fetch('/hosts')
+        .then(response => {
+          if (!response.ok) throw new Error('Failed to fetch hosts');
+          return response.json();
+        })
+        .then(data => {
+          const hosts = data.hosts || [];
+          
+          // Filter out Local host - it's always connected automatically
+          const externalHosts = hosts.filter(host => host.name !== 'Local' && !host.url.includes('unix://'));
+
+          hostsList.innerHTML = '';
+          
+          externalHosts.forEach((host, displayIndex) => {
+            // Calculate correct index for API calls (external hosts are in docker_hosts array, not including Local)
+            // The API expects index in docker_hosts, so we need index of external host, not full hosts array
+            const originalIndex = displayIndex;
+            
+            const hostDiv = document.createElement('div');
+            hostDiv.style.cssText = 'display:flex;flex-direction:column;gap:0;padding:10px;background:rgba(14,165,233,0.04);border:1px solid var(--card-border);border-radius:10px;margin-bottom:8px;';
+            const hostRow = document.createElement('div');
+            hostRow.style.cssText = 'display:flex;align-items:center;gap:10px;';
+            
+            // Host status indicator
+            const statusDot = document.createElement('div');
+            statusDot.className = 'host-status-dot';
+            statusDot.dataset.hostIndex = String(originalIndex);
+            statusDot.dataset.enabled = String(Boolean(host.enabled));
+            statusDot.style.cssText = `width:10px;height:10px;border-radius:50%;flex-shrink:0;background:${host.enabled ? '#f59e0b' : '#6b7280'};`;
+            statusDot.title = host.enabled ? '正在检测 Docker 连接…' : '已停用';
+            
+            // Host info
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'flex:1;min-width:0;';
+            
+            const nameSpan = document.createElement('div');
+            nameSpan.style.cssText = 'font-weight:600;color:var(--text);font-size:0.95rem;margin-bottom:2px;';
+            nameSpan.textContent = host.name;
+            
+            const urlSpan = document.createElement('div');
+            urlSpan.style.cssText = 'font-size:0.85rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            urlSpan.textContent = host.url;
+            
+            infoDiv.appendChild(nameSpan);
+            infoDiv.appendChild(urlSpan);
+            
+            // Action buttons container
+            const actionsDiv = document.createElement('div');
+            actionsDiv.style.cssText = 'display:flex;gap:6px;flex-shrink:0;';
+            
+            // Toggle button
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.innerHTML = host.enabled ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+            toggleBtn.title = host.enabled ? '停用' : '启用';
+            toggleBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid var(--card-border);background:rgba(14,165,233,0.06);color:var(--text);border-radius:6px;cursor:pointer;font-size:0.9rem;transition:all 0.2s;';
+            toggleBtn.onmouseover = () => toggleBtn.style.background = 'rgba(14,165,233,0.12)';
+            toggleBtn.onmouseout = () => toggleBtn.style.background = 'rgba(14,165,233,0.06)';
+            toggleBtn.onclick = () => toggleHost(originalIndex);
+            
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+            editBtn.title = '编辑';
+            editBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid var(--card-border);background:rgba(251,191,36,0.06);color:var(--text);border-radius:6px;cursor:pointer;font-size:0.9rem;transition:all 0.2s;';
+            editBtn.onmouseover = () => editBtn.style.background = 'rgba(251,191,36,0.12)';
+            editBtn.onmouseout = () => editBtn.style.background = 'rgba(251,191,36,0.06)';
+            editBtn.onclick = () => editHost(originalIndex, host);
+            
+            // Delete button (always show for external hosts)
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+            deleteBtn.title = '删除';
+            deleteBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:8px;border:1px solid var(--card-border);background:rgba(239,68,68,0.06);color:var(--text);border-radius:6px;cursor:pointer;font-size:0.9rem;transition:all 0.2s;';
+            deleteBtn.onmouseover = () => deleteBtn.style.background = 'rgba(239,68,68,0.12)';
+            deleteBtn.onmouseout = () => deleteBtn.style.background = 'rgba(239,68,68,0.06)';
+            deleteBtn.onclick = () => deleteHost(originalIndex, host.name);
+            actionsDiv.appendChild(deleteBtn);
+            
+            actionsDiv.appendChild(toggleBtn);
+            actionsDiv.appendChild(editBtn);
+            
+            const infoLine = document.createElement('div');
+            infoLine.className = 'host-info-line';
+            infoLine.dataset.hostIndex = String(originalIndex);
+            infoLine.dataset.hostName = host.name;
+            infoLine.style.cssText = 'font-size:0.78rem;color:var(--muted);margin:6px 0 0 26px;';
+            infoLine.textContent = host.enabled ? '统计中…' : '已停用';
+
+            hostRow.appendChild(statusDot);
+            hostRow.appendChild(infoDiv);
+            hostRow.appendChild(actionsDiv);
+
+            hostDiv.appendChild(hostRow);
+            hostDiv.appendChild(infoLine);
+
+            hostsList.appendChild(hostDiv);
+          });
+
+          refreshHostStatuses();
+          refreshHostOverview().catch(e => console.error('overview:', e));
+          // 5 秒后仍是「统计中…」就说明概览请求没回来，给出可读提示
+          setTimeout(function(){
+            document.querySelectorAll('.host-info-line').forEach(function(el){
+              if (el.textContent.trim() === '统计中…') {
+                el.textContent = '概览加载超时，请刷新页面';
+                el.style.color = '#f59e0b';
+              }
+            });
+          }, 5000);
+        })
+        .catch(err => {
+          console.error('Error loading hosts:', err);
+          hostsList.innerHTML = '<div style="color:#f87171;font-size:0.9rem;padding:8px;">主机列表加载失败</div>';
+        });
+    }
+
+    // Toggle host enabled/disabled status
+    function toggleHost(index){
+      fetch(`/hosts/${index}/toggle`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            loadHosts();
+            // Auto-save config after toggle
+            const mainForm = document.querySelector('form[action="{{ url_for("update") }}"]');
+            if (mainForm) {
+              // Create hidden input to track that this is an auto-save
+              const autoSaveInput = document.createElement('input');
+              autoSaveInput.type = 'hidden';
+              autoSaveInput.name = 'auto_save';
+              autoSaveInput.value = '1';
+              mainForm.appendChild(autoSaveInput);
+              mainForm.submit();
+            }
+          } else {
+            alert('切换主机状态失败：' + (data.error || '未知错误'));
+          }
+        })
+        .catch(err => {
+          console.error('Error toggling host:', err);
+          alert('切换主机状态失败');
+        });
+    }
+
+    // Edit host (prompt for new values) - Config auto-saves after update
+    function editHost(index, host){
+      // 直接把「添加新主机」表单切换成编辑模式，名称/地址/令牌/CA 都能改
+      const nameEl = document.getElementById('new-host-name');
+      const urlEl = document.getElementById('new-host-url');
+      const tokEl = document.getElementById('new-host-token');
+      const idxEl = document.getElementById('edit-host-index');
+      const hint = document.getElementById('edit-hint');
+      const hintName = document.getElementById('edit-host-name');
+      const caEl = document.getElementById('new-host-ca');
+      const addBtn = document.querySelector('[onclick="addNewHost()"]');
+
+      if (!nameEl || !urlEl || !idxEl) return;
+      nameEl.value = host.name || '';
+      urlEl.value = host.url || '';
+      if (tokEl) { tokEl.value = ''; tokEl.placeholder = '留空表示不修改当前令牌'; }
+      if (caEl) caEl.value = '';
+      idxEl.value = String(index);
+      if (hint) hint.style.display = 'block';
+      if (hintName) hintName.textContent = host.name || '';
+      if (addBtn) addBtn.textContent = '保存修改';
+      const st = document.getElementById('ca_status');
+      if (st) {
+        st.textContent = host.has_ca ? '已配置（留空不修改）' : '未配置';
+        st.style.color = 'var(--muted)';
+      }
+      urlEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+
+    function cancelEditHost(){
+      const idxEl = document.getElementById('edit-host-index');
+      const hint = document.getElementById('edit-hint');
+      const addBtn = document.querySelector('[onclick="addNewHost()"]');
+      const tokEl = document.getElementById('new-host-token');
+      const caEl = document.getElementById('new-host-ca');
+      ['new-host-name', 'new-host-url'].forEach(function(id){
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      if (tokEl) { tokEl.value = ''; tokEl.placeholder = '网关 client-info.txt 里那串'; }
+      if (caEl) caEl.value = '';
+      if (idxEl) idxEl.value = '';
+      if (hint) hint.style.display = 'none';
+      if (addBtn) addBtn.textContent = '添加主机';
+      const st = document.getElementById('ca_status');
+      if (st) { st.textContent = '未选择'; st.style.color = 'var(--muted)'; }
+    }
+
+    // Delete host with confirmation - Config auto-saves after deletion
+    function deleteHost(index, hostName){
+      if (!confirm(`确定要删除主机 "${hostName}" 吗？`)) return;
+      
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/hosts/${index}/delete`;
+      form.innerHTML = '<input type="hidden" name="auto_save" value="1">';
+      document.body.appendChild(form);
+      form.submit();
+      // Clean up form element (though page will reload)
+      setTimeout(() => form.remove(), 100);
+    }
+
+    // Add new host from the form - Config auto-saves after adding
+    async function saveAutoCa(on) {
+  const st = document.getElementById('ca_status');
+  try {
+    const r = await fetch('/hosts/auto-ca', {
+      method: 'POST',
+      body: new URLSearchParams({auto_fetch_ca: on ? '1' : '0'}),
+      headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}
+    });
+    const j = await r.json();
+    if (st) {
+      st.textContent = (j.ok ? '✓ ' : '✗ ') + (j.message || '');
+      st.style.color = j.ok ? '#10b981' : '#ef4444';
+    }
+    setTimeout(() => { location.reload(); }, 600);
+  } catch (e) {
+    if (st) { st.textContent = '✗ 保存失败'; st.style.color = '#ef4444'; }
+  }
+}
+
+function loadCaFile(file) {
+  const st = document.getElementById('ca_status');
+  const hid = document.getElementById('new-host-ca');
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const text = (ev.target.result || '').trim();
+    if (text.indexOf('BEGIN CERTIFICATE') < 0) {
+      st.textContent = '✗ 这不是 PEM 证书文件';
+      st.style.color = '#ef4444';
+      return;
+    }
+    if (hid) hid.value = text;
+    st.textContent = '✓ 已选择（' + text.length + ' 字节）';
+    st.style.color = '#10b981';
+  };
+  reader.readAsText(file);
+}
+
+async function fetchCa() {
+  const urlInput = document.getElementById('new-host-url');
+  const st = document.getElementById('ca_status');
+  const url = urlInput ? urlInput.value.trim() : '';
+  if (!url) {
+    st.textContent = '请先在「地址」里填 https://IP:2376';
+    st.style.color = '#ef4444';
+    return;
+  }
+  st.textContent = '获取中…';
+  st.style.color = 'var(--muted)';
+  try {
+    const r = await fetch('/hosts/fetch-ca', {
+      method: 'POST',
+      body: new URLSearchParams({url: url}),
+      headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}
+    });
+    const j = await r.json();
+    st.textContent = (j.ok ? '✓ ' : '✗ ') + (j.message || '');
+    st.style.color = j.ok ? '#10b981' : '#ef4444';
+    if (j.ok && j.pem) {
+      const hid = document.getElementById('new-host-ca');
+      if (hid) hid.value = j.pem;
+    }
+  } catch (e) {
+    st.textContent = '✗ 获取失败：' + e;
+    st.style.color = '#ef4444';
+  }
+}
+
+async function uploadCa(file) {
+  const st = document.getElementById('ca_status');
+  if (!file) return;
+  st.textContent = '上传中…';
+  st.style.color = 'var(--muted)';
+  const fd = new FormData();
+  fd.append('ca_file', file);
+  try {
+    const r = await fetch('/hosts/ca', {
+      method: 'POST',
+      body: fd,
+      headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}
+    });
+    const j = await r.json();
+    st.textContent = j.ok ? ('✓ ' + (j.message || '已配置')) : ('✗ ' + (j.message || '保存失败'));
+    st.style.color = j.ok ? '#10b981' : '#ef4444';
+  } catch (e) {
+    st.textContent = '✗ 上传失败：' + e;
+    st.style.color = '#ef4444';
+  }
+}
+
+async function clearCa() {
+  if (!confirm('确定清除已保存的 CA 证书？\n清除后会连不上所有 https 外部主机。')) return;
+  const st = document.getElementById('ca_status');
+  try {
+    const r = await fetch('/hosts/ca', {
+      method: 'POST',
+      body: new URLSearchParams({clear: '1'}),
+      headers: {'X-Requested-With': 'fetch', 'Accept': 'application/json'}
+    });
+    const j = await r.json();
+    st.textContent = j.ok ? '未配置' : ('✗ ' + (j.message || '清除失败'));
+    st.style.color = j.ok ? 'var(--muted)' : '#ef4444';
+  } catch (e) {
+    st.textContent = '✗ 清除失败';
+    st.style.color = '#ef4444';
+  }
+}
+
+function addNewHost(){
+      const nameInput = document.getElementById('new-host-name');
+      const urlInput = document.getElementById('new-host-url');
+      const tokenInput = document.getElementById('new-host-token');
+      
+      const name = nameInput.value.trim();
+      const url = urlInput.value.trim();
+      const token = tokenInput ? tokenInput.value.trim() : '';
+      const caInput = document.getElementById('new-host-ca');
+      const ca = caInput ? caInput.value : '';
+      
+      if (!name || !url) {
+        alert('请填写主机名称和地址');
+        return;
+      }
+      
+      const idxEl = document.getElementById('edit-host-index');
+      const editIndex = idxEl ? idxEl.value : '';
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = editIndex !== '' ? ('/hosts/' + editIndex + '/update') : '/hosts/add';
+      form.innerHTML = `
+        <input type="hidden" name="name" value="${name.replace(/"/g, '&quot;')}">
+        <input type="hidden" name="url" value="${url.replace(/"/g, '&quot;')}">
+        <input type="hidden" name="token" value="${token.replace(/"/g, '&quot;')}">
+        <input type="hidden" name="ca_pem" value="${(ca || '').replace(/"/g, '&quot;')}">
+        <input type="hidden" name="enabled" value="on">
+        <input type="hidden" name="auto_save" value="1">
+      `;
+      document.body.appendChild(form);
+      form.submit();
+      // Clean up form element and clear inputs (though page will reload)
+      setTimeout(() => form.remove(), 100);
+      nameInput.value = '';
+      urlInput.value = '';
+      if (tokenInput) tokenInput.value = '';
+      if (caInput) caInput.value = '';
+    }
+
+    // Manage collapsible Docker hosts panel
+    function initHostsCollapse(){
+      const hostsCard = document.getElementById('hosts-card');
+      const hostsHeader = document.getElementById('hosts-header');
+      const hostsPanel = document.getElementById('hosts-panel');
+      const hostsArrow = document.getElementById('hosts-arrow');
+      if(!hostsCard || !hostsHeader || !hostsPanel) return;
+      
+      // Toggle hosts panel open/closed
+      function setHosts(open){
+        if(open){
+          hostsCard.classList.remove('collapsed');
+          // Use scrollHeight for smooth transition
+          hostsPanel.style.maxHeight = hostsPanel.scrollHeight + 20 + 'px';
+          hostsHeader.setAttribute('aria-expanded','true');
+        } else {
+          hostsCard.classList.add('collapsed');
+          hostsPanel.style.maxHeight = '0px';
+          hostsHeader.setAttribute('aria-expanded','false');
+        }
+      }
+      
+      // Start with panel collapsed
+      setHosts(false);
+      hostsHeader.addEventListener('click', () => {
+        // Toggle panel state on click
+        const isOpen = hostsHeader.getAttribute('aria-expanded') === 'true';
+        setHosts(!isOpen);
+      });
+    }
+
+    // Initialize all components after DOM ready
+    window.addEventListener('error', function(ev){
+      try {
+        var t = document.getElementById('toast');
+        var tx = document.getElementById('toast-text');
+        if (tx) tx.textContent = '页面脚本错误：' + (ev.message || '');
+        if (t) { t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 6000); }
+      } catch (e) {}
+    });
+
+var SEC_WARN_KEY = 'prunemate-sec-warn-always';
+var secWarnTimer = null;
+
+function secWarnAlways() {
+  try { return localStorage.getItem(SEC_WARN_KEY) !== '0'; } catch (e) { return true; }
+}
+
+function applySecWarn() {
+  var full = document.getElementById('sec-warn-full');
+  var pill = document.getElementById('sec-warn-pill');
+  var cb = document.getElementById('sec-warn-always');
+  if (!full || !pill) return;
+  var always = secWarnAlways();
+  if (cb) cb.checked = always;
+  if (always) {
+    full.style.display = '';
+    pill.style.display = 'none';
+    scheduleSecWarnCollapse();
+  } else {
+    full.style.display = 'none';
+    pill.style.display = '';
+  }
+}
+
+function scheduleSecWarnCollapse() {
+  if (secWarnTimer) clearTimeout(secWarnTimer);
+  secWarnTimer = setTimeout(collapseSecWarn, 30000);
+}
+
+function collapseSecWarn() {
+  var full = document.getElementById('sec-warn-full');
+  var pill = document.getElementById('sec-warn-pill');
+  if (!full || !pill) return;
+  full.style.display = 'none';
+  pill.style.display = '';
+  if (secWarnTimer) { clearTimeout(secWarnTimer); secWarnTimer = null; }
+}
+
+function expandSecWarn() {
+  var full = document.getElementById('sec-warn-full');
+  var pill = document.getElementById('sec-warn-pill');
+  if (!full || !pill) return;
+  full.style.display = '';
+  pill.style.display = 'none';
+  scheduleSecWarnCollapse();
+}
+
+function toggleSecAlways(on) {
+  try { localStorage.setItem(SEC_WARN_KEY, on ? '1' : '0'); } catch (e) {}
+  applySecWarn();
+}
+
+    document.addEventListener('DOMContentLoaded', function(){
+      applySecWarn();
+      // Set initial schedule display based on frequency
+      updateScheduleVisibility();
+      document.getElementById('frequency').addEventListener('change', updateScheduleVisibility);
+      // Initialize input field validation
+      initDayOfMonthClamp();
+      {% if not use_24h %}
+      initTimeClamp();
+      {% endif %}
+      // Setup notification provider switching
+      const provEl = document.getElementById('notifications_provider');
+      if(provEl){
+        provEl.addEventListener('change', updateNotifUI);
+        updateNotifUI();
+      }
+      // Setup collapsible notification panel
+      initNotificationCollapse();
+      
+      // Setup collapsible Docker hosts panel
+      initHostsCollapse();
+      
+      // Load all-time statistics
+      loadStats();
+      
+      // Load Docker hosts
+      loadHosts();
+      setInterval(refreshHostStatuses, 60000);
+      
+      {% if not use_24h %}
+      // Setup 12-hour time picker with AM/PM
+      const timeHidden = document.getElementById('time');
+      const timeHour = document.getElementById('time-hour');
+      const timeMinute = document.getElementById('time-minute');
+      const timePeriod = document.getElementById('time-period');
+      
+      if(timeHidden && timeHour && timeMinute && timePeriod){
+        // Convert 24h time to 12h format for display
+        function init12hTime(){
+          const time24 = timeHidden.value;
+          const [h24Str, minStr] = time24.split(':');
+          const h24 = parseInt(h24Str, 10);
+          const min = parseInt(minStr, 10);
+          let h12, period;
+          
+          // Convert 24-hour to 12-hour format with AM/PM
+          if(h24 === 0){
+            h12 = 12;
+            period = 'AM';
+          } else if(h24 < 12){
+            h12 = h24;
+            period = 'AM';
+          } else if(h24 === 12){
+            h12 = 12;
+            period = 'PM';
+          } else {
+            h12 = h24 - 12;
+            period = 'PM';
+          }
+          
+          // Update display fields with converted values
+          timeHour.value = h12;
+          timeMinute.value = String(min).padStart(2, '0');
+          timePeriod.value = period;
+        }
+        
+        // Convert 12h format to 24h and update hidden field
+        function update24hTime(){
+          let h12 = parseInt(timeHour.value) || 0;
+          let min = parseInt(timeMinute.value) || 0;
+          const period = timePeriod.value;
+          
+          // Ensure values are within valid ranges
+          h12 = Math.max(1, Math.min(12, h12));
+          min = Math.max(0, Math.min(59, min));
+          
+          // Update display fields with clamped values
+          timeHour.value = h12;
+          timeMinute.value = String(min).padStart(2, '0');
+          
+          // Convert 12-hour format back to 24-hour
+          let h24;
+          if(period === 'AM'){
+            h24 = h12 === 12 ? 0 : h12;
+          } else {
+            h24 = h12 === 12 ? 12 : h12 + 12;
+          }
+          
+          // Store 24-hour format in hidden field for form submission
+          timeHidden.value = String(h24).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+        }
+        
+        // Load initial 24h time and convert to 12h display
+        init12hTime();
+        
+        // Update hidden field when 12h fields change
+        timeHour.addEventListener('change', update24hTime);
+        timeMinute.addEventListener('change', update24hTime);
+        timePeriod.addEventListener('change', update24hTime);
+      }
+      {% endif %}
+    });
+
+    // Prune Preview Functions
+    function showPrunePreview() {
+      const modal = document.getElementById('prunePreviewModal');
+      const content = document.getElementById('previewContent');
+      const actions = document.getElementById('previewActions');
+      
+      // Reset actions div to default state (in case it was modified by previous execution)
+      actions.innerHTML = '<button onclick="closePrunePreview()" class="btn" style="background: rgba(148,163,184,0.08); color: var(--text);">取消</button><button onclick="executeConfirmedPrune()" class="btn btn-danger" id="confirmPruneBtn" style="display: none;">✓ 确认并执行</button>';
+      
+      modal.style.display = 'block';
+      content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);"><div style="font-size: 2rem; margin-bottom: 12px;">⏳</div><p>正在加载预览…</p></div>';
+      actions.style.visibility = 'hidden';
+      
+      // Collect current prune settings from checkboxes
+      const pruneSettings = {
+        prune_containers: document.getElementById('prune_containers')?.checked || false,
+        prune_images: document.getElementById('prune_images')?.checked || false,
+        prune_networks: document.getElementById('prune_networks')?.checked || false,
+        prune_volumes: document.getElementById('prune_volumes')?.checked || false,
+        prune_build_cache: document.getElementById('prune_build_cache')?.checked || false
+      };
+      
+      fetch('{{ url_for("preview_prune") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(pruneSettings)
+      })
+      .then(parseJsonSafe)
+      .then(data => {
+        if (data.error) {
+          content.innerHTML = '<div style="text-align: center; padding: 40px; color: #f87171;"><div style="font-size: 2rem; margin-bottom: 12px;">⚠️</div><p>' + data.error + '</p></div>';
+          return;
+        }
+        
+        let html = '';
+        const totals = data.totals || {containers: 0, images: 0, networks: 0, volumes: 0, build_cache: 0};
+        const hasItems = totals.containers > 0 || totals.images > 0 || totals.networks > 0 || totals.volumes > 0 || totals.build_cache > 0;
+        
+        if (!hasItems) {
+          html = '<div style="text-align: center; padding: 40px; color: var(--accent-strong);"><div style="font-size: 2rem; margin-bottom: 12px;">✅</div><p style="font-size: 1.1rem; margin-bottom: 8px;">没有需要清理的内容！</p><p style="color: var(--muted); font-size: 0.9rem;">你的 Docker 资源已经很干净了。</p></div>';
+          content.innerHTML = html;
+          actions.style.visibility = 'visible';
+          const confirmBtn = document.getElementById('confirmPruneBtn');
+          if (confirmBtn) confirmBtn.style.display = 'none';
+          return;
+        }
+        
+        // Summary
+        html += '<div style="background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px;">';
+        html += '<h3 style="margin: 0 0 16px 0; color: var(--text); font-size: 1.1rem;">📊 汇总</h3>';
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">';
+        
+        if (totals.containers > 0) {
+          html += '<div style="text-align: center;"><div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 4px;">' + totals.containers + '</div><div style="color: var(--muted); font-size: 0.85rem;">容器</div></div>';
+        }
+        if (totals.images > 0) {
+          html += '<div style="text-align: center;"><div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 4px;">' + totals.images + '</div><div style="color: var(--muted); font-size: 0.85rem;">镜像</div></div>';
+        }
+        if (totals.networks > 0) {
+          html += '<div style="text-align: center;"><div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 4px;">' + totals.networks + '</div><div style="color: var(--muted); font-size: 0.85rem;">网络</div></div>';
+        }
+        if (totals.volumes > 0) {
+          html += '<div style="text-align: center;"><div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 4px;">' + totals.volumes + '</div><div style="color: var(--muted); font-size: 0.85rem;">数据卷</div></div>';
+        }
+        if (totals.build_cache > 0) {
+          html += '<div style="text-align: center;"><div style="font-size: 1.8rem; color: var(--accent); margin-bottom: 4px;">' + totals.build_cache + '</div><div style="color: var(--muted); font-size: 0.85rem;">构建缓存</div></div>';
+        }
+        
+        html += '</div></div>';
+        
+        // Per-host details
+        if (data.hosts && data.hosts.length > 0) {
+          data.hosts.forEach(host => {
+            if (!host.success) {
+              html += '<div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.15); border-radius: 12px; padding: 16px; margin-bottom: 16px;">';
+              html += '<h4 style="margin: 0 0 8px 0; color: #fca5a5;">❌ ' + host.name + '</h4>';
+              html += '<p style="color: var(--muted); margin: 0; font-size: 0.9rem;">' + (host.error || '连接失败') + '</p>';
+              html += '</div>';
+              return;
+            }
+            
+            const ht = host.totals || {};
+            const hostTotal = (ht.containers || 0) + (ht.images || 0) + (ht.networks || 0)
+                            + (ht.volumes || 0) + (ht.build_cache || 0);
+
+            html += '<div style="background: rgba(148,163,184,0.04); border: 1px solid rgba(148,163,184,0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px;">';
+            html += '<h4 style="margin: 0 0 6px 0; color: var(--text); font-size: 1rem;">🐳 ' + host.name + '</h4>';
+            html += '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">'
+                 + '容器 ' + (ht.containers_total ?? '-') + '（运行 ' + (ht.containers_running ?? '-') + '） · '
+                 + '镜像 ' + (ht.images_total ?? '-') + ' · '
+                 + '本次可回收 ' + (ht.space_h || '-') + '</div>';
+            if (hostTotal === 0) {
+              html += '<div style="color:#10b981;font-size:0.88rem;">✅ 这台主机没有需要清理的内容</div></div>';
+              return;
+            }
+            
+            // Containers
+            if (host.containers && host.containers.length > 0) {
+              html += '<div style="margin-bottom: 12px;"><strong style="color: var(--accent); font-size: 0.9rem;">🗑️ 容器 (' + host.containers.length + '):</strong>';
+              html += '<div style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: 0.85rem; color: var(--muted);">';
+              host.containers.slice(0, 10).forEach(c => {
+                html += '<div style="padding: 4px 0;">• ' + (c.name || c.id) + ' <span style="color: #6b7280;">(' + c.status + ')</span></div>';
+              });
+              if (host.containers.length > 10) {
+                html += '<div style="padding: 4px 0; font-style: italic;">... 另有 ' + (host.containers.length - 10) + ' 项</div>';
+              }
+              html += '</div></div>';
+            }
+            
+            // Images
+            if (host.images && host.images.length > 0) {
+              html += '<div style="margin-bottom: 12px;"><strong style="color: var(--accent); font-size: 0.9rem;">💿 镜像 (' + host.images.length + '):</strong>';
+              html += '<div style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: 0.85rem; color: var(--muted);">';
+              host.images.slice(0, 10).forEach(img => {
+                const tags = img.tags.join(', ') || img.id;
+                html += '<div style="padding: 4px 0;">• ' + tags + ' <span style="color: #6b7280;">(' + img.size + ')</span></div>';
+              });
+              if (host.images.length > 10) {
+                html += '<div style="padding: 4px 0; font-style: italic;">... 另有 ' + (host.images.length - 10) + ' 项</div>';
+              }
+              html += '</div></div>';
+            }
+            
+            // Networks
+            if (host.networks && host.networks.length > 0) {
+              html += '<div style="margin-bottom: 12px;"><strong style="color: var(--accent); font-size: 0.9rem;">🌐 网络 (' + host.networks.length + '):</strong>';
+              html += '<div style="margin-top: 6px; max-height: 100px; overflow-y: auto; font-size: 0.85rem; color: var(--muted);">';
+              host.networks.forEach(net => {
+                html += '<div style="padding: 4px 0;">• ' + net.name + '</div>';
+              });
+              html += '</div></div>';
+            }
+            
+            // Volumes
+            if (host.volumes && host.volumes.length > 0) {
+              html += '<div style="margin-bottom: 12px;"><strong style="color: var(--accent); font-size: 0.9rem;">📦 数据卷 (' + host.volumes.length + '):</strong>';
+              html += '<div style="margin-top: 6px; max-height: 100px; overflow-y: auto; font-size: 0.85rem; color: var(--muted);">';
+              host.volumes.forEach(vol => {
+                html += '<div style="padding: 4px 0;">• ' + vol.name + '</div>';
+              });
+              html += '</div></div>';
+            }
+            
+            // Build Cache
+            if (host.build_cache && host.build_cache.length > 0) {
+              html += '<div style="margin-bottom: 12px;"><strong style="color: var(--accent); font-size: 0.9rem;">🏗️ 构建缓存 (' + host.build_cache.length + '):</strong>';
+              html += '<div style="margin-top: 6px; max-height: 100px; overflow-y: auto; font-size: 0.85rem; color: var(--muted);">';
+              host.build_cache.slice(0, 10).forEach(cache => {
+                html += '<div style="padding: 4px 0;">• ' + cache.id + ' (' + cache.type + ', ' + cache.size + ')</div>';
+              });
+              if (host.build_cache.length > 10) {
+                html += '<div style="padding: 4px 0; font-style: italic;">... 另有 ' + (host.build_cache.length - 10) + ' 项</div>';
+              }
+              html += '</div></div>';
+            }
+            
+            html += '</div>';
+          });
+        }
+        
+        content.innerHTML = html;
+        actions.style.visibility = 'visible';
+        const confirmBtn = document.getElementById('confirmPruneBtn');
+        if (confirmBtn) confirmBtn.style.display = hasItems ? 'block' : 'none';
+      })
+      .catch(error => {
+        content.innerHTML = '<div style="text-align: center; padding: 40px; color: #f87171;"><div style="font-size: 2rem; margin-bottom: 12px;">❌</div><p>预览加载失败</p><p style="font-size: 0.85rem; color: var(--muted); margin-top: 8px;">' + error.message + '</p></div>';
+        actions.style.visibility = 'visible';
+        const confirmBtn = document.getElementById('confirmPruneBtn');
+        if (confirmBtn) confirmBtn.style.display = 'none';
+      });
+    }
+
+    function closePrunePreview() {
+      document.getElementById('prunePreviewModal').style.display = 'none';
+    }
+
+    function executeConfirmedPrune() {
+      const btn = document.getElementById('confirmPruneBtn');
+      if (!btn) return; // Safety check
+      
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ 执行中…';
+      
+      // Collect current prune settings from checkboxes (in case they changed between preview and confirm)
+      const pruneSettings = {
+        prune_containers: document.getElementById('prune_containers')?.checked || false,
+        prune_images: document.getElementById('prune_images')?.checked || false,
+        prune_networks: document.getElementById('prune_networks')?.checked || false,
+        prune_volumes: document.getElementById('prune_volumes')?.checked || false,
+        prune_build_cache: document.getElementById('prune_build_cache')?.checked || false
+      };
+      
+      fetch('{{ url_for("run_confirmed") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(pruneSettings)
+      })
+      .then(parseJsonSafe)
+      .then(data => {
+        const content = document.getElementById('previewContent');
+        const actions = document.getElementById('previewActions');
+        if (!content || !actions) return;
+        
+        if (data.success) {
+          content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--accent-strong);"><div style="font-size: 2rem; margin-bottom: 12px;">✅</div><p style="font-size: 1.1rem; margin-bottom: 8px;">清理执行成功！</p><p style="color: var(--muted); font-size: 0.9rem;">详细结果请查看日志。</p></div>';
+          actions.innerHTML = '<button onclick="closePrunePreview(); setTimeout(refreshAll, 300);" class="btn btn-secondary">关闭</button>';
+          setTimeout(refreshAll, 500);
+        } else {
+          content.innerHTML = '<div style="text-align: center; padding: 40px; color: #f87171;"><div style="font-size: 2rem; margin-bottom: 12px;">⚠️</div><p>' + (data.message || '未知错误') + '</p></div>';
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      })
+      .catch(error => {
+        const content = document.getElementById('previewContent');
+        if (content) {
+          content.innerHTML = '<div style="text-align: center; padding: 40px; color: #f87171;"><div style="font-size: 2rem; margin-bottom: 12px;">❌</div><p>执行失败</p><p style="font-size: 0.85rem; color: var(--muted); margin-top: 8px;">' + (error.message || '未知错误') + '</p></div>';
+        }
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      });
+    }
+
+    // 主题切换：localStorage 记忆，默认跟随系统
+    (function initThemeToggle(){
+      var btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      var sun = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>';
+      var moon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+      function render(){
+        var light = document.documentElement.getAttribute('data-theme') === 'light';
+        btn.innerHTML = light ? moon : sun;
+        btn.title = light ? '切换到深色主题' : '切换到亮色主题';
+      }
+      render();
+      btn.addEventListener('click', function(){
+        var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        try { localStorage.setItem('prunemate-theme', next); } catch(e) {}
+        render();
+      });
+    })();
+  </script>
+  </div><!-- /.container -->
+</body>
+</html>

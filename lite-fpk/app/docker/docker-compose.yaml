@@ -1,0 +1,36 @@
+# 显式指定 compose 项目名，与应用中心保持一致，
+# 避免手动 docker compose up 时生成 docker_default 导致容器名冲突
+name: prunemate-lite
+
+services:
+  prunemate:
+    image: anoniemerd/prunemate:1.4.0
+    container_name: prunemate-lite
+    # 启动时把中文界面文件覆盖进镜像（/zh 为空时自动退回英文，不会启动失败）
+    command:
+      - sh
+      - -c
+      - |
+        cp -f /zh/index.html /app/templates/index.html 2>/dev/null || true
+        cp -f /zh/login.html /app/templates/login.html 2>/dev/null || true
+        cp -f /zh/prunemate.py /app/prunemate.py 2>/dev/null || true
+        exec python prunemate.py
+    ports:
+      - "7676:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/apps/prunemate-lite/shares/prunemate-lite/config:/config
+      - /var/apps/prunemate-lite/shares/prunemate-lite/logs:/var/log
+      # 中文界面文件随包安装在 payload 里，直接只读挂载
+      - /var/apps/prunemate-lite/target/docker/zh:/zh:ro
+    environment:
+      - PRUNEMATE_TZ=Asia/Shanghai
+      - PRUNEMATE_TIME_24H=true
+      - PRUNEMATE_AUTH_USER=admin
+      - PRUNEMATE_AUTH_PASSWORD_HASH=c2NyeXB0OjMyNzY4Ojg6MSRSNk1pS2VEQTNKTjJLaXBUJGExMTY2MTVlNGExNWY5YWQzYjIzYmY3N2FkODJkMTcwNjI1ZjJjNDBkZTMyYjJjNWYyZjkwYThjM2YyM2NhZjlmZjlhNTBjNjBkOGY0ODg0MjA3ZDRlNTUwNmFhOWY4NGFlNWUwNGNmMDMzYzA4OGVjMWUyZDNlMDBhMDI0OTk2
+      - PRUNEMATE_SECRET=5863ba45606300195b17328a477996cf4a02c868e57776318170f00cbadf5b08
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 512m
+    restart: unless-stopped

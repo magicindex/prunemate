@@ -1,0 +1,16 @@
+appname               = prunemate-lite
+version               = 1.4.0
+display_name          = PruneMate 单机版
+desc                  = 只清理本机 Docker 的轻量版：镜像、容器、网络、构建缓存。不含外部主机、网关、令牌与证书功能，不开放额外端口。
+platform              = all
+source                = thirdparty
+maintainer            = anoniemerd
+maintainer_url        = https://github.com/anoniemerd/PruneMate
+distributor           = cyberzero
+distributor_url       = https://github.com/magicindex/prunemate
+os_min_version        = 1.2.1010
+desktop_uidir         = ui
+desktop_applaunchname = prunemate-lite.Application
+service_port          = 7676
+checkport             = false
+ctl_stop              = true

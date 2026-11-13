@@ -1,0 +1,7 @@
+# python:3.12-slim 自带 openssl，首次启动生成证书就不需要联网装包
+FROM python:3.12-slim
+WORKDIR /app
+COPY gateway.py /app/gateway.py
+VOLUME ["/state"]
+EXPOSE 2376
+CMD ["python", "-u", "/app/gateway.py"]

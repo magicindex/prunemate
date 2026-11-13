@@ -1,0 +1,9 @@
+#!/bin/bash
+# 停止网关进程
+PIDFILE=/var/apps/prunemate-gateway/var/gateway.pid
+if [ -f "$PIDFILE" ]; then
+    kill "$(cat "$PIDFILE")" 2>/dev/null
+    sleep 1
+    rm -f "$PIDFILE"
+fi
+exit 0

@@ -1,0 +1,5 @@
+#!/bin/bash
+# 状态文件放在应用目录下（卷上可见，文件管理器能打开）
+mkdir -p /var/apps/prunemate-gateway/config/state 2>/dev/null
+chmod 700 /var/apps/prunemate-gateway/config/state 2>/dev/null
+exit 0

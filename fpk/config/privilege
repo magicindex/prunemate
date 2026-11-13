@@ -1,0 +1,8 @@
+{
+    "defaults":
+    {
+        "run-as": "package"
+    },
+    "username": "docker-prunemate",
+    "groupname": "docker-prunemate"
+}

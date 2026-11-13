@@ -1,0 +1,4 @@
+#!/bin/bash
+# 卸载后清理容器（保留 shares 里的配置与日志，数据不删）
+docker rm -f prunemate >/dev/null 2>&1
+exit 0

@@ -1,0 +1,22 @@
+# 构建产物
+*.fpk
+fpk/app/docker/zh/
+fpk/app/docker/companion/
+# 打包工具
+.tools/
+# Python
+__pycache__/
+*.pyc
+# 系统垃圾
+.DS_Store
+Thumbs.db
+
+# companion 里的敏感物：令牌与私钥不入库
+companion/docker-socket-proxy/token
+companion/docker-socket-proxy/certs/
+gateway-fpk/*.fpk
+fpk/app/docker/README.md
+gateway-fpk/app/gateway/README.md
+lite-fpk/app/docker/zh/
+lite-fpk/app/docker/README.md
+lite-fpk/*.fpk

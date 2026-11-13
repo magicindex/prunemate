@@ -1,0 +1,57 @@
+# docker-socket-proxy + 自举 TLS 网关 —— 配合 PruneMate 管理"外部 Docker 主机"
+#
+# 放在【被管理的那台 Docker 主机】上，一条命令即可：
+#   docker compose up -d
+#
+# 首次启动会自动生成 CA、服务端证书和访问令牌（每个部署独立，不预置任何密钥）。
+# 起来后执行 docker compose logs tls-gateway 查看客户端要填的配置。
+#
+# PruneMate 侧：
+#   主机地址  https://<本机IP>:2376
+#   环境变量  PRUNEMATE_HOST_TOKEN=<日志里那串>
+#             REQUESTS_CA_BUNDLE=/certs/ca.crt
+#   挂载      ca.crt（从本机 /state 卷里取出）
+#
+# ⚠️ 2376 权限上基本等价于该主机 root，只放内网，建议配合防火墙。
+
+services:
+  # 只做接口白名单，不对外暴露；绑定回环，仅本网关可访问
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: docker-socket-proxy
+    privileged: true
+    network_mode: host
+    environment:
+      BIND_CONFIG: 127.0.0.1:2375
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      BUILD: 1
+      SYSTEM: 1
+      POST: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+  # 自带 TLS 终结 + 令牌校验，首次启动自动生成密钥与证书
+  tls-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    image: prunemate-tls-gateway:1.2
+    container_name: prunemate-tls-gateway
+    network_mode: host          # 需要枚举宿主 IP 写进证书 SAN
+    environment:
+      UPSTREAM: http://127.0.0.1:2375
+      STATE_DIR: /state
+      PORT: 2376
+      # EXTRA_HOSTS: nas.example.com,10.0.0.5   # 需要额外域名/IP 时填
+    volumes:
+      - gateway-state:/state
+    depends_on:
+      - docker-socket-proxy
+    restart: unless-stopped
+
+volumes:
+  gateway-state:
