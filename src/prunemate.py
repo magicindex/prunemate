@@ -40,6 +40,8 @@ LAST_RUN_FILE = Path(os.environ.get("PRUNEMATE_LAST_RUN", "/config/last_run_key"
 LAST_RUN_LOCK = Path(str(LAST_RUN_FILE) + ".lock")
 # File to persist all-time statistics
 STATS_FILE = Path(os.environ.get("PRUNEMATE_STATS", "/config/stats.json"))
+# 密码哈希持久化文件：首次启动写入，之后一直以它为准（升级重建容器也不覆盖）
+AUTH_FILE = Path(os.environ.get("PRUNEMATE_AUTH_FILE", "/config/auth.json"))
 HOST_STATS_FILE = Path(os.environ.get("PRUNEMATE_HOST_STATS", "/config/host_stats.json"))
 
 DEFAULT_CONFIG = {
@@ -86,6 +88,22 @@ if len(sys.argv) > 1 and sys.argv[1] == "--gen-hash":
     else:
         print("Usage: python prunemate.py --gen-hash <password>")
         sys.exit(1)
+
+if len(sys.argv) > 1 and sys.argv[1] == "--set-password":
+    if len(sys.argv) > 2:
+        raw = generate_password_hash(sys.argv[2])
+        safe = base64.b64encode(raw.encode("utf-8")).decode("utf-8")
+        AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        AUTH_FILE.write_text(json.dumps({"password_hash": safe}, indent=2), encoding="utf-8")
+        try:
+            os.chmod(AUTH_FILE, 0o600)
+        except Exception:
+            pass
+        print(f"密码已更新并写入 {AUTH_FILE}")
+        sys.exit(0)
+    print("Usage: python prunemate.py --set-password <新密码>")
+    sys.exit(1)
+
 
 def configure_logging():
     """Configure logging with console and rotating file handlers."""
@@ -1634,16 +1652,70 @@ def heartbeat():
 
 
 # ---- Authentication Logic ----
+_password_hash_cache = {"value": None}
+
+
+def resolve_password_hash() -> str:
+    """当前生效的密码哈希。
+
+    优先级：
+    1. /config/auth.json —— 首次启动时由本函数写入，之后一直生效（升级不覆盖）
+    2. PRUNEMATE_INIT_PASSWORD（明文，现场算哈希）—— 自定义初始密码
+    3. PRUNEMATE_AUTH_PASSWORD_HASH（出厂默认哈希）
+
+    2/3 只在 auth.json 不存在时使用，并立即落盘。
+    """
+    if _password_hash_cache["value"] is not None:
+        return _password_hash_cache["value"]
+
+    try:
+        if AUTH_FILE.exists():
+            data = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
+            h = (data or {}).get("password_hash") or ""
+            if h:
+                _password_hash_cache["value"] = h
+                return h
+    except Exception as e:
+        log(f"读取 {AUTH_FILE} 失败，回退到环境变量: {e}")
+
+    h = ""
+
+    init_pw = (os.environ.get("PRUNEMATE_INIT_PASSWORD") or "").strip()
+    if init_pw:
+        try:
+            h = base64.b64encode(generate_password_hash(init_pw).encode("utf-8")).decode("utf-8")
+            log("使用 PRUNEMATE_INIT_PASSWORD 作为初始密码")
+        except Exception as e:
+            log(f"生成初始密码哈希失败: {e}")
+
+    if not h:
+        h = (os.environ.get("PRUNEMATE_AUTH_PASSWORD_HASH") or "").strip()
+
+    if h:
+        try:
+            AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+            AUTH_FILE.write_text(json.dumps({"password_hash": h}, indent=2), encoding="utf-8")
+            try:
+                os.chmod(AUTH_FILE, 0o600)
+            except Exception:
+                pass
+            log(f"密码哈希已写入 {AUTH_FILE}，后续升级不会再覆盖")
+        except Exception as e:
+            log(f"写入 {AUTH_FILE} 失败: {e}")
+
+    _password_hash_cache["value"] = h
+    return h
+
+
 def is_auth_enabled():
     """Check if authentication is enabled via environment variables."""
-    # Only enabled if hash is present
-    return bool(os.environ.get("PRUNEMATE_AUTH_PASSWORD_HASH"))
+    return bool(resolve_password_hash())
 
 
 def check_auth(username, password):
     """Verify username and password against environment variables."""
     expected_user = os.environ.get("PRUNEMATE_AUTH_USER", "admin")
-    password_hash = os.environ.get("PRUNEMATE_AUTH_PASSWORD_HASH")
+    password_hash = resolve_password_hash()
 
     if not password_hash:
         return False

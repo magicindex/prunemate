@@ -125,28 +125,40 @@ fnos-cli app install-fpk /vol1/1000/prunemate.fpk --volume-id <卷ID> --yes
 
 ## 修改密码
 
-### 已经装好之后改（最常见）
+### 方式一：命令行改（推荐，升级不丢）
 
 ```bash
-# 1) 生成新哈希（把 '你的新密码' 换成实际密码）
-docker run --rm anoniemerd/prunemate:1.4.0 python prunemate.py --gen-hash '你的新密码'
-
-# 2) 覆盖安装目录里 compose 的哈希（base64 只含 A-Za-z0-9+/=，用 | 作分隔符是安全的）
-COMPOSE=/var/apps/prunemate/target/docker/docker-compose.yaml
-sudo sed -i "s|PRUNEMATE_AUTH_PASSWORD_HASH=.*|PRUNEMATE_AUTH_PASSWORD_HASH=把上一步输出粘在这里|" "$COMPOSE"
-
-# 3) 重建容器让新密码生效
-cd /var/apps/prunemate/target/docker && sudo docker compose up -d --force-recreate
+docker exec prunemate python prunemate.py --set-password '你的新密码'
+docker restart prunemate
 ```
 
-注意：`/var/apps/prunemate/target/` 指向应用安装目录，**应用升级时会被覆盖**，
-所以升级后要重新改一次；想长期固定，请把同一个哈希也写进你自己保存的 compose 里。
+单机版把容器名换成 `prunemate-lite`。
 
-### 打包时改默认密码
+命令会把新哈希写入 `/config/auth.json`（数据目录里），**升级或重建容器都不会覆盖**。
 
-改 `fpk/app/docker/docker-compose.yaml` 里的 `PRUNEMATE_AUTH_PASSWORD_HASH`，
-顺手换掉 `PRUNEMATE_SECRET`（`openssl rand -hex 32`），然后重新 `./scripts/build-fpk.sh`。
-会话密钥一换，所有已登录浏览器都会失效，这是预期行为。
+### 方式二：安装时指定初始密码
+
+在 compose 里加环境变量：
+
+```yaml
+environment:
+  - PRUNEMATE_INIT_PASSWORD=你的初始密码
+```
+
+首次启动时用它生成哈希并写入 `auth.json`；之后即使把这个变量删掉、升级重装，
+密码也保持不变（`auth.json` 优先）。
+
+### 密码是怎么存的
+
+```
+优先级：/config/auth.json  >  PRUNEMATE_INIT_PASSWORD  >  PRUNEMATE_AUTH_PASSWORD_HASH
+```
+
+`auth.json` 只在不存在时由环境变量生成，之后一直是权威来源。文件权限 `0600`。
+里面的哈希是 scrypt（32768 轮），**从哈希反推不出密码**，忘记密码只能用
+`--set-password` 重设。
+
+> 早期版本把哈希写在 compose 里，升级会被覆盖回出厂密码。现在不会了。
 
 ## 预构建镜像
 
@@ -498,6 +510,7 @@ sudo chown root:root ./config ./logs && sudo chmod 755 ./config ./logs
 | `v1.4.0-36` | README「本仓库新增或修改的」补充单机版条目与边界原则 |
 | `v1.4.0-37` | 清洗内网地址，发布者地址改为 GitHub，为公开发布做准备 |
 | `v1.4.0-38` | README 恢复显示出厂默认密码（并强调装后立即修改） |
+| `v1.4.0-39` | 密码哈希持久化到 `/config/auth.json`，升级不再被覆盖；新增 `--set-password` 与 `PRUNEMATE_INIT_PASSWORD` |
 
 ### 网关包的版本号（独立编号）
 

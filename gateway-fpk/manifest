@@ -1,5 +1,5 @@
 appname               = prunemate-gateway
-version               = 2.0.9
+version               = 2.0.11
 display_name          = PruneMate 网关
 desc                  = 为 PruneMate 提供外部 Docker 主机接入的安全网关：TLS 加密、访问令牌校验、Docker API 接口白名单。直接运行在主机上，不依赖任何镜像；首次启动自动生成密钥与证书。
 platform              = all
