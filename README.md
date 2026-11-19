@@ -456,6 +456,28 @@ sudo chown root:root ./config ./logs && sudo chmod 755 ./config ./logs
 | `无法连接` | 网关没启动，或端口不是 2376 |
 | `path not allowed` | 网关白名单拦截（例如 docker-py 请求了未放行的接口） |
 
+## 常见问题
+
+### 预览里什么都是 0，日志报 `Connection refused` / `Connection aborted`
+
+**原因**：Docker 服务重启过。容器启动时把 `/var/run/docker.sock` 这个**文件**绑定进容器，
+Docker 重启会重建这个文件（换 inode），容器里看到的还是旧的那个，于是连接被拒。
+
+**处理**（二选一）：
+
+- 在应用中心把 PruneMate 停止再启动一次，或 `docker restart prunemate`
+- 升级到 **v1.4.0-40 及以上**：compose 改为挂载 `/var/run` **目录**，Docker 重启后自动连接，无需再重启应用
+
+从旧版本升级时，compose 在应用目录里会被新包覆盖，重装即生效。
+
+### 忘记密码了
+
+```bash
+docker exec prunemate rm -f /config/auth.json && docker restart prunemate
+```
+
+删掉持久化的哈希后会回落到包内出厂密码。
+
 ## 版本号说明
 
 这里有两套编号，别混：
@@ -511,6 +533,7 @@ sudo chown root:root ./config ./logs && sudo chmod 755 ./config ./logs
 | `v1.4.0-37` | 清洗内网地址，发布者地址改为 GitHub，为公开发布做准备 |
 | `v1.4.0-38` | README 恢复显示出厂默认密码（并强调装后立即修改） |
 | `v1.4.0-39` | 密码哈希持久化到 `/config/auth.json`，升级不再被覆盖；新增 `--set-password` 与 `PRUNEMATE_INIT_PASSWORD` |
+| `v1.4.0-40` | 挂载 `/var/run` 目录替代 socket 文件（Docker 重启后仍可连）；连接失败时提示重启应用 |
 
 ### 网关包的版本号（独立编号）
 

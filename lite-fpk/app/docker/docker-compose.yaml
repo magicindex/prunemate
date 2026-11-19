@@ -18,7 +18,8 @@ services:
     ports:
       - "7676:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      # 挂 /var/run 目录而非 socket 文件：Docker 重启后 socket 重建也能连上
+      - /var/run:/var/run
       - /var/apps/prunemate-lite/shares/prunemate-lite/config:/config
       - /var/apps/prunemate-lite/shares/prunemate-lite/logs:/var/log
       # 中文界面文件随包安装在 payload 里，直接只读挂载

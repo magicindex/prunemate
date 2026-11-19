@@ -959,7 +959,16 @@ def create_docker_client(host_url: str, token: str = "", ca_pem: str = ""):
             # Fallback: try as-is
             return docker.DockerClient(base_url=host_url)
     except Exception as e:
-        log(f"Failed to create Docker client for {host_url}: {e}")
+        _msg = str(e)
+        # docker 重启后 bind mount 的 socket 指向旧 inode，会报 Connection refused
+        if host_url.startswith("unix://") and (
+                "Connection refused" in _msg or "Connection aborted" in _msg
+                or "No such file" in _msg):
+            _msg += "（Docker 服务可能已重启，请在应用中心重启 PruneMate 后重试）"
+            log(f"Failed to create Docker client for {host_url}: {_msg}")
+            _LAST_HOST_ERROR[host_url] = RuntimeError(_msg)
+            return None
+        log(f"Failed to create Docker client for {host_url}: {_msg}")
         _LAST_HOST_ERROR[host_url] = e
         return None
 
