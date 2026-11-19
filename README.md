@@ -534,6 +534,7 @@ docker exec prunemate rm -f /config/auth.json && docker restart prunemate
 | `v1.4.0-38` | README 恢复显示出厂默认密码（并强调装后立即修改） |
 | `v1.4.0-39` | 密码哈希持久化到 `/config/auth.json`，升级不再被覆盖；新增 `--set-password` 与 `PRUNEMATE_INIT_PASSWORD` |
 | `v1.4.0-40` | 挂载 `/var/run` 目录替代 socket 文件（Docker 重启后仍可连）；连接失败时提示重启应用 |
+| `v1.4.0-41` | 更新记录补充 socket 挂载修复的完整排查过程；发布包随 README 重建 |
 
 ### 网关包的版本号（独立编号）
 
@@ -570,6 +571,65 @@ docker exec prunemate rm -f /config/auth.json && docker restart prunemate
 裁剪由 `scripts/make-lite.py` 在构建时完成，不是运行时开关——单机版进程里**不存在**这些代码。
 
 ## 更新记录
+
+### V1.4.0-40（2026-11-19）· 修复「Docker 重启后扫描不到资源」
+
+**现象**
+
+预览弹窗里镜像、容器、构建缓存全部显示 0，清理列表是空的，但页面能打开、容器状态显示运行中。
+
+**日志**
+
+```
+Failed to create Docker client for unix:///var/run/docker.sock:
+('Connection refused' / 'Connection aborted')
+```
+
+**根因**
+
+compose 原来挂载的是 `/var/run/docker.sock` 这个**文件**。Docker 服务重启时该文件会被重建
+（新的 inode），而容器里 bind mount 指向的仍是旧 inode，于是每次连接都被拒绝。
+
+实测时间线：
+
+| 事件 | 时间 |
+|---|---|
+| 容器启动 | 2026-11-14 23:02:21 |
+| dockerd 重启 | 2026-11-14 23:09:17 |
+| 之后所有预览 | 全部为 0，直到重启应用 |
+
+容器内直接验证：socket 文件存在，但 `connect()` 返回 `Connection refused`。
+
+**修复**
+
+1. compose 改为挂载 `/var/run` **目录**
+   ```yaml
+   - /var/run:/var/run     # 而不是 /var/run/docker.sock:/var/run/docker.sock
+   ```
+   目录的 inode 不变，Docker 重启后 socket 被重建也能立刻连上，**不需要重启应用**。
+2. 连接失败时在日志与界面给出可操作提示：
+   「Docker 服务可能已重启，请在应用中心重启 PruneMate 后重试」。
+3. 服务端的 socket 异常判定：`unix://` + `Connection refused/aborted/No such file`
+   统一归为此类，避免用户误判成"没有可清理内容"。
+
+**如何排查同类问题**
+
+```bash
+# 1) 容器是否在跑
+docker ps | grep prunemate
+
+# 2) 容器内能不能连上 Docker
+docker exec prunemate python -c "import socket;s=socket.socket(socket.AF_UNIX);s.connect('/var/run/docker.sock');print('ok')"
+
+# 3) 看挂载的是文件还是目录
+docker inspect prunemate --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}'
+```
+
+第 3 步若显示 `.../docker.sock -> /var/run/docker.sock`，就是旧版挂载方式，升级即可。
+
+**临时规避（未升级时）**
+
+在应用中心把 PruneMate 停止再启动一次。
 
 ### V1.4.0-6 ~ -30（打包与配套演进）
 
